@@ -86,6 +86,7 @@ func (p PaymentInstructionsBuilder) Read(qrCrypto string, publicKey string, opti
 	var data, err = p.PasetoHandler.Verify(
 		token,
 		publicKey,
+		paseto.PasetoVerifyOptions{},
 	)
 
 	if err != nil {

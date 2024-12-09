@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"crypto-payments-standard-protocol/paseto"
@@ -24,35 +25,36 @@ func main() {
 	// fmt.Println(paseto.GetPublicKey(keys["publicKey"]))
 
 	// fmt.Println(time.Now().UTC().Format(time.RFC3339))
-	qrCrypto := "qr-crypto.v4.public.eyJwYXlsb2FkIjp7InBheW1lbnQiOnsiaWQiOiJpZCIsImFkZHJlc3MiOiJzdHJpbmciLCJuZXR3b3JrIjoiVFJPTiIsImNvaW4iOiJUUjdOSHFqZUtReEdUQ2k4cThaWTRwTDhvdFN6Z2pMajZ0IiwiaXNfb3BlbiI6ZmFsc2UsImFtb3VudCI6IjEifSwib3JkZXIiOnsidG90YWxfYW1vdW50IjoiMSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJpdGVtcyI6W3sidGl0bGUiOiJpdGVtTmFtZSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJhbW91bnQiOiIxIiwicXVhbnRpdHkiOjF9XSwibWVyY2hhbnQiOnsibmFtZSI6Im1lcmNoYW50TmFtZSJ9fX0sImtpZCI6ImtleS1pZC1vbmUiLCJraXMiOiJ0ZXN0aW5nLmNvbSIsImtlcCI6IjFoIiwiaWF0IjoiMjAyNC0xMi0wM1QwMTo1ODo0NC40NTdaIiwiZXhwIjoiMjAyNC0xMi0wM1QwMjo1ODo0NC40NTdaIiwiaXNzIjoiaHR0cHM6Ly9leGFtcGxlLmNvbSJ9jY4wYEauQu4yZBFr7ddd0_7pv8SoLCK9_vjMZgGWzOkzd_qFgRZOSUnh8sHfQjtWoIu1hekQPWfswWRLZ5nwBA"
-	token := "v4.public.eyJwYXlsb2FkIjp7InBheW1lbnQiOnsiaWQiOiJpZCIsImFkZHJlc3MiOiJzdHJpbmciLCJuZXR3b3JrIjoiVFJPTiIsImNvaW4iOiJUUjdOSHFqZUtReEdUQ2k4cThaWTRwTDhvdFN6Z2pMajZ0IiwiaXNfb3BlbiI6ZmFsc2UsImFtb3VudCI6IjEifSwib3JkZXIiOnsidG90YWxfYW1vdW50IjoiMSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJpdGVtcyI6W3sidGl0bGUiOiJpdGVtTmFtZSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJhbW91bnQiOiIxIiwicXVhbnRpdHkiOjF9XSwibWVyY2hhbnQiOnsibmFtZSI6Im1lcmNoYW50TmFtZSJ9fX0sImtpZCI6ImtleS1pZC1vbmUiLCJraXMiOiJ0ZXN0aW5nLmNvbSIsImtlcCI6IjFoIiwiaWF0IjoiMjAyNC0xMi0wM1QwMTo1ODo0NC40NTdaIiwiZXhwIjoiMjAyNC0xMi0wM1QwMjo1ODo0NC40NTdaIiwiaXNzIjoiaHR0cHM6Ly9leGFtcGxlLmNvbSJ9jY4wYEauQu4yZBFr7ddd0_7pv8SoLCK9_vjMZgGWzOkzd_qFgRZOSUnh8sHfQjtWoIu1hekQPWfswWRLZ5nwBA"
+	// qrCrypto := "qr-crypto.v4.public.eyJwYXlsb2FkIjp7InBheW1lbnQiOnsiaWQiOiJpZCIsImFkZHJlc3MiOiJzdHJpbmciLCJuZXR3b3JrIjoiVFJPTiIsImNvaW4iOiJUUjdOSHFqZUtReEdUQ2k4cThaWTRwTDhvdFN6Z2pMajZ0IiwiaXNfb3BlbiI6ZmFsc2UsImFtb3VudCI6IjEifSwib3JkZXIiOnsidG90YWxfYW1vdW50IjoiMSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJpdGVtcyI6W3sidGl0bGUiOiJpdGVtTmFtZSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJhbW91bnQiOiIxIiwicXVhbnRpdHkiOjF9XSwibWVyY2hhbnQiOnsibmFtZSI6Im1lcmNoYW50TmFtZSJ9fX0sImtpZCI6ImtleS1pZC1vbmUiLCJraXMiOiJ0ZXN0aW5nLmNvbSIsImtlcCI6IjFoIiwiaWF0IjoiMjAyNC0xMi0wM1QwMTo1ODo0NC40NTdaIiwiZXhwIjoiMjAyNC0xMi0wM1QwMjo1ODo0NC40NTdaIiwiaXNzIjoiaHR0cHM6Ly9leGFtcGxlLmNvbSJ9jY4wYEauQu4yZBFr7ddd0_7pv8SoLCK9_vjMZgGWzOkzd_qFgRZOSUnh8sHfQjtWoIu1hekQPWfswWRLZ5nwBA"
+	// token := "v4.public.eyJwYXlsb2FkIjp7InBheW1lbnQiOnsiaWQiOiJpZCIsImFkZHJlc3MiOiJzdHJpbmciLCJuZXR3b3JrIjoiVFJPTiIsImNvaW4iOiJUUjdOSHFqZUtReEdUQ2k4cThaWTRwTDhvdFN6Z2pMajZ0IiwiaXNfb3BlbiI6ZmFsc2UsImFtb3VudCI6IjEifSwib3JkZXIiOnsidG90YWxfYW1vdW50IjoiMSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJpdGVtcyI6W3sidGl0bGUiOiJpdGVtTmFtZSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJhbW91bnQiOiIxIiwicXVhbnRpdHkiOjF9XSwibWVyY2hhbnQiOnsibmFtZSI6Im1lcmNoYW50TmFtZSJ9fX0sImtpZCI6ImtleS1pZC1vbmUiLCJraXMiOiJ0ZXN0aW5nLmNvbSIsImtlcCI6IjFoIiwiaWF0IjoiMjAyNC0xMi0wM1QwMTo1ODo0NC40NTdaIiwiZXhwIjoiMjAyNC0xMi0wM1QwMjo1ODo0NC40NTdaIiwiaXNzIjoiaHR0cHM6Ly9leGFtcGxlLmNvbSJ9jY4wYEauQu4yZBFr7ddd0_7pv8SoLCK9_vjMZgGWzOkzd_qFgRZOSUnh8sHfQjtWoIu1hekQPWfswWRLZ5nwBA"
 
 	var handler = paseto.PasetoV4Handler{}
-	// var payload = map[string]any{"payload": map[string]any{"pepe": 2, "mengano": "sultano"}, "kis": "ariel"}
+	var payload = map[string]any{"payload": map[string]any{"pepe": 2, "mengano": "sultano"}, "kis": "test-kis"}
 
-	// payloadString, _ := json.Marshal(payload)
+	payloadString, _ := json.Marshal(payload)
 
-	// options := paseto.PasetoSignOptions{
-	// 	KeyId:     "pepito",
-	// 	ExpiresIn: "1h",
-	// }
-
-	// token, err := handler.Sign(string(payloadString), keys["secretKey"], options)
-
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	var cryptoHandler = PaymentInstructionsBuilder{PasetoHandler: handler}
-	var options = QrCriptoReadOptions{IgnoreKeyExp: true}
-
-	payment, errPayment := cryptoHandler.Read(qrCrypto, keys["publicKey"], options)
-
-	if errPayment != nil {
-		panic(errPayment)
+	options := paseto.PasetoSignOptions{
+		Issuer:    "test-issuer.com",
+		KeyId:     "test-kid",
+		ExpiresIn: "1h",
 	}
 
-	verifyToken, err := handler.Verify(token, keys["publicKey"])
+	token, err := handler.Sign(string(payloadString), keys["secretKey"], options)
+
+	if err != nil {
+		panic(err)
+	}
+
+	// var cryptoHandler = PaymentInstructionsBuilder{PasetoHandler: handler}
+	// var options = QrCriptoReadOptions{IgnoreKeyExp: true}
+
+	// payment, errPayment := cryptoHandler.Read(qrCrypto, keys["publicKey"], options)
+
+	// if errPayment != nil {
+	// 	panic(errPayment)
+	// }
+
+	verifyToken, err := handler.Verify(token, keys["publicKey"], paseto.PasetoVerifyOptions{})
 
 	if err != nil {
 		panic(err)
@@ -63,6 +65,6 @@ func main() {
 
 	fmt.Println("Verify token", verifyToken.Payload.Kid)
 
-	fmt.Println(payment)
+	// fmt.Println(payment)
 
 }

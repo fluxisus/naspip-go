@@ -1,10 +1,10 @@
 package paseto
 
 type PasetoSignOptions struct {
+	Footer    []byte
 	Assertion []byte
 	Audience  string
 	ExpiresIn string
-	Footer    []byte
 	Issuer    string
 	Jti       string
 	KeyId     string
@@ -12,7 +12,19 @@ type PasetoSignOptions struct {
 	Subject   string
 }
 
+type PasetoVerifyOptions struct {
+	Footer      []byte
+	Assertion   []byte
+	IgnoreExp   bool
+	IgnoreIat   bool
+	IgnoreNbf   bool
+	MaxTokenAge string
+	Issuer      string
+	Subject     string
+	Audience    string
+}
+
 type PasetoV4 interface {
 	Sign(payload string, privateKey string, options PasetoSignOptions) (string, error)
-	Verify(token string, publicKey string) (PasetoCompleteResult, error)
+	Verify(token string, publicKey string, options PasetoVerifyOptions) (PasetoCompleteResult, error)
 }

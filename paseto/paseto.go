@@ -76,11 +76,11 @@ func (p PasetoV4Handler) Sign(payload string, privateKey string, options PasetoS
 	return pasetoV4.Sign(dataJson, key, options.Footer, options.Assertion)
 }
 
-func (p PasetoV4Handler) Verify(token string, publicKey string) (PasetoCompleteResult, error) {
+func (p PasetoV4Handler) Verify(token string, publicKey string, options PasetoVerifyOptions) (PasetoCompleteResult, error) {
 
 	var key = GetPublicKey(publicKey)
 
-	tokenData, err := pasetoV4.Verify(token, key, nil, nil)
+	tokenData, err := pasetoV4.Verify(token, key, options.Footer, options.Assertion)
 
 	if err != nil {
 		return PasetoCompleteResult{}, err
@@ -90,7 +90,90 @@ func (p PasetoV4Handler) Verify(token string, publicKey string) (PasetoCompleteR
 
 	json.Unmarshal(tokenData, &payload)
 
+	verifyErr := assertPayload(payload, options)
+
+	if verifyErr != nil {
+		return PasetoCompleteResult{}, verifyErr
+	}
+
 	var data = PasetoCompleteResult{Version: "v4", Purpose: "public", Footer: []byte{}, Payload: payload}
 
 	return data, err
+}
+
+func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
+
+	var now = time.Now().UTC()
+
+	// Check iss
+	if options.Issuer != "" && payload.Iss != options.Issuer {
+		return errors.New("issuer mismatch")
+	}
+
+	// Check sub
+	if options.Subject != "" && payload.Sub != options.Subject {
+		return errors.New("subject mismatch")
+	}
+
+	// Check aud
+	if options.Audience != "" && payload.Aud != options.Audience {
+		return errors.New("audience mismatch")
+	}
+
+	// Check iat
+	if payload.Iat != "" {
+		iat, err := time.Parse(time.RFC3339, payload.Iat)
+
+		if err != nil {
+			return errors.New("payload.iat must be a valid RFC3339 string")
+		}
+
+		if !options.IgnoreIat && now.Before(iat) {
+			return errors.New("token issued in the future")
+		}
+	}
+
+	// Check nbf
+	if payload.Nbf != "" {
+		nbf, err := time.Parse(time.RFC3339, payload.Nbf)
+
+		if err != nil {
+			return errors.New("payload.nbf must be a valid RFC3339 string")
+		}
+
+		if !options.IgnoreNbf && now.After(nbf) {
+			return errors.New("token is not active yet")
+		}
+	}
+
+	// Check exp
+	if payload.Exp != "" {
+		exp, err := time.Parse(time.RFC3339, payload.Exp)
+
+		if err != nil {
+			return errors.New("payload.exp must be a valid RFC3339 string")
+		}
+
+		if !options.IgnoreExp && now.Before(exp) {
+			return errors.New("token is expired")
+		}
+	}
+
+	// Check maxTokenAge
+	if !options.IgnoreIat && options.MaxTokenAge != "" {
+
+		maxDuration, err := str2duration.ParseDuration(options.MaxTokenAge)
+
+		if err != nil {
+			return errors.New("invalid MaxTokenAge format")
+		}
+
+		iat, _ := time.Parse(time.RFC3339, payload.Iat)
+
+		if now.Before(iat.Add(maxDuration)) {
+			return errors.New("maxTokenAge exceeded")
+		}
+	}
+
+	return nil
 }
