@@ -1,6 +1,7 @@
 package paseto
 
 import (
+	"crypto-payments-standard-protocol/utils"
 	"encoding/json"
 	"errors"
 	"time"
@@ -40,14 +41,24 @@ func (p PasetoV4Handler) Sign(payload string, privateKey string, options PasetoS
 		return "", err
 	}
 
-	var now = time.Now().UTC()
+	var issuedAt = time.Now().UTC()
 
 	data.Iss = options.Issuer
 	data.Aud = options.Audience
 	data.Sub = options.Subject
 	data.Jti = options.Jti
 	data.Kid = options.KeyId
-	data.Iat = now.Format(time.RFC3339)
+	data.Iat = issuedAt.Format(utils.RFC3339Mili)
+
+	if options.IssuedAt != "" {
+		var err error
+		issuedAt, err = time.Parse(utils.RFC3339Mili, options.IssuedAt)
+
+		if err != nil {
+			return "", errors.New("invalid issuedAt format")
+		}
+		data.Iat = issuedAt.Format(utils.RFC3339Mili)
+	}
 
 	if options.ExpiresIn != "" {
 		dur, err := str2duration.ParseDuration(options.ExpiresIn)
@@ -56,7 +67,7 @@ func (p PasetoV4Handler) Sign(payload string, privateKey string, options PasetoS
 			return "", errors.New("invalid expiresIn format")
 		}
 
-		data.Exp = now.Add(dur).Format(time.RFC3339)
+		data.Exp = issuedAt.Add(dur).Format(utils.RFC3339Mili)
 	}
 
 	if options.NotBefore != "" {
@@ -66,7 +77,7 @@ func (p PasetoV4Handler) Sign(payload string, privateKey string, options PasetoS
 			return "", errors.New("invalid notBefore format")
 		}
 
-		data.Nbf = now.Add(dur).Format(time.RFC3339)
+		data.Nbf = issuedAt.Add(dur).Format(utils.RFC3339Mili)
 	}
 
 	var key = GetPrivateKey(privateKey)
@@ -122,7 +133,7 @@ func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
 
 	// Check iat
 	if payload.Iat != "" {
-		iat, err := time.Parse(time.RFC3339, payload.Iat)
+		iat, err := time.Parse(utils.RFC3339Mili, payload.Iat)
 
 		if err != nil {
 			return errors.New("payload.iat must be a valid RFC3339 string")
@@ -135,26 +146,26 @@ func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
 
 	// Check nbf
 	if payload.Nbf != "" {
-		nbf, err := time.Parse(time.RFC3339, payload.Nbf)
+		nbf, err := time.Parse(utils.RFC3339Mili, payload.Nbf)
 
 		if err != nil {
 			return errors.New("payload.nbf must be a valid RFC3339 string")
 		}
 
-		if !options.IgnoreNbf && now.After(nbf) {
+		if !options.IgnoreNbf && now.Before(nbf) {
 			return errors.New("token is not active yet")
 		}
 	}
 
 	// Check exp
 	if payload.Exp != "" {
-		exp, err := time.Parse(time.RFC3339, payload.Exp)
+		exp, err := time.Parse(utils.RFC3339Mili, payload.Exp)
 
 		if err != nil {
 			return errors.New("payload.exp must be a valid RFC3339 string")
 		}
 
-		if !options.IgnoreExp && now.Before(exp) {
+		if !options.IgnoreExp && now.After(exp) {
 			return errors.New("token is expired")
 		}
 	}
@@ -168,9 +179,9 @@ func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
 			return errors.New("invalid MaxTokenAge format")
 		}
 
-		iat, _ := time.Parse(time.RFC3339, payload.Iat)
+		iat, _ := time.Parse(utils.RFC3339Mili, payload.Iat)
 
-		if now.Before(iat.Add(maxDuration)) {
+		if now.After(iat.Add(maxDuration)) {
 			return errors.New("maxTokenAge exceeded")
 		}
 	}
