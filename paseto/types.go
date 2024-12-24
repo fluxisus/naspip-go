@@ -4,6 +4,7 @@ type PasetoSignOptions struct {
 	Footer    []byte
 	Assertion []byte
 	Audience  string
+	IssuedAt  string
 	ExpiresIn string
 	Issuer    string
 	Jti       string

@@ -19,8 +19,6 @@ func main() {
 		"secretKey": "k4.secret.y4-gze54dwfLR0eyxiJL2mRicZr6SX2-xIn6kgo999iwZWx7h4DK3rJx-aQqXcDPtHEHfieSUM-Aps0u_FXCWQ",
 	}
 
-	fmt.Println(keys)
-
 	// fmt.Println(paseto.GetPrivateKey(keys["secretKey"]))
 	// fmt.Println(paseto.GetPublicKey(keys["publicKey"]))
 
@@ -30,6 +28,7 @@ func main() {
 
 	var handler = paseto.PasetoV4Handler{}
 	var payload = map[string]any{"payload": map[string]any{"pepe": 2, "mengano": "sultano"}, "kis": "test-kis"}
+	// var assertion = []byte(keys["publicKey"])
 
 	payloadString, _ := json.Marshal(payload)
 
@@ -60,7 +59,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(token)
+	fmt.Println(len(token))
 	fmt.Println(paseto.DecodeV4(token))
 
 	fmt.Println("Verify token", verifyToken.Payload.Kid)
