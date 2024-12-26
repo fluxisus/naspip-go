@@ -82,17 +82,18 @@ type PaymentInstructionsBuilder struct {
 	PasetoHandler paseto.PasetoV4
 }
 
-func (p PaymentInstructionsBuilder) Read(qrCrypto string, publicKey string, options QrCriptoReadOptions) (any, error) {
+func (p PaymentInstructionsBuilder) Read(qrCrypto string, publicKey string, options QrCriptoReadOptions) (paseto.PasetoCompleteResult, error) {
 	var isValid = strings.HasPrefix(qrCrypto, "qr-crypto.")
 
 	if !isValid {
-		return nil, errors.New("invalid 'qr-crypto' token prefix")
+		return paseto.PasetoCompleteResult{}, errors.New("invalid 'qr-crypto' token prefix")
 	}
 
 	token := strings.Replace(qrCrypto, "qr-crypto.", "", 1)
 
 	options.VerifyOptions.IgnoreExp = false
 	options.VerifyOptions.IgnoreIat = false
+	options.VerifyOptions.Assertion = []byte(publicKey)
 
 	var data, err = p.PasetoHandler.Verify(
 		token,
@@ -101,26 +102,26 @@ func (p PaymentInstructionsBuilder) Read(qrCrypto string, publicKey string, opti
 	)
 
 	if err != nil {
-		return nil, err
+		return paseto.PasetoCompleteResult{}, err
 	}
 
 	if options.KeyId != "" && data.Payload.Kid != options.KeyId {
-		return nil, errors.New("invalid Key ID")
+		return paseto.PasetoCompleteResult{}, errors.New("invalid Key ID")
 	}
 
 	if options.KeyIssuer != "" && options.KeyIssuer != data.Payload.Kis {
-		return nil, errors.New("invalid Key Issuer")
+		return paseto.PasetoCompleteResult{}, errors.New("invalid Key Issuer")
 	}
 
 	if !options.IgnoreKeyExp {
 		keyExpiredAt, err := time.Parse(time.RFC3339, data.Payload.Kep)
 
 		if err != nil {
-			return nil, errors.New("invalid key expiration")
+			return paseto.PasetoCompleteResult{}, errors.New("invalid key expiration")
 		}
 
 		if time.Now().After(keyExpiredAt) {
-			return nil, errors.New("expired Key")
+			return paseto.PasetoCompleteResult{}, errors.New("expired Key")
 		}
 	}
 
@@ -246,21 +247,23 @@ func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error)
 			validator.SetField("payment_coin", nil),
 		),
 
-		validator.Must(utils.BiggerThanZero(payload.Payment.Amount)).OnError(
-			validator.SetField("payment_amount", nil),
-			validator.SetCustomKey("PAYMENT_AMOUNT_INVALID"),
-		),
-		validator.When(payload.Payment.MinAmount != "").Then(
-			validator.Must(utils.BiggerThanOrEqualZero(payload.Payment.MinAmount)).OnError(
+		validator.When(payload.Payment.IsOpen).Then(
+			validator.Must(payload.Payment.MinAmount != "" && utils.BiggerThanOrEqualZero(payload.Payment.MinAmount)).OnError(
 				validator.SetField("payment_min_amount", nil),
 				validator.SetCustomKey("PAYMENT_MIN_AMOUNT_INVALID"),
-			)),
-		validator.When(payload.Payment.MaxAmount != "").Then(
-			validator.Must(utils.BiggerThanZero(payload.Payment.MaxAmount)).OnError(
+			),
+
+			validator.Must(payload.Payment.MaxAmount != "" && utils.BiggerThanZero(payload.Payment.MaxAmount)).OnError(
 				validator.SetField("payment_min_amount", nil),
 				validator.SetCustomKey("PAYMENT_MAX_AMOUNT_INVALID"),
 			),
+		).Else(
+			validator.Must(utils.BiggerThanZero(payload.Payment.Amount)).OnError(
+				validator.SetField("payment_amount", nil),
+				validator.SetCustomKey("PAYMENT_AMOUNT_INVALID"),
+			),
 		),
+
 		validator.When(payload.Order.CoinCode != "").Then(validator.StrLen(&payload.Order.CoinCode, 2, 50).OnError(
 			validator.SetField("order_coin_code", nil),
 		)),
