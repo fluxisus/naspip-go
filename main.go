@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"crypto-payments-standard-protocol/paseto"
+	"fmt"
 )
 
 func main() {
@@ -27,43 +25,66 @@ func main() {
 	// token := "v4.public.eyJwYXlsb2FkIjp7InBheW1lbnQiOnsiaWQiOiJpZCIsImFkZHJlc3MiOiJzdHJpbmciLCJuZXR3b3JrIjoiVFJPTiIsImNvaW4iOiJUUjdOSHFqZUtReEdUQ2k4cThaWTRwTDhvdFN6Z2pMajZ0IiwiaXNfb3BlbiI6ZmFsc2UsImFtb3VudCI6IjEifSwib3JkZXIiOnsidG90YWxfYW1vdW50IjoiMSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJpdGVtcyI6W3sidGl0bGUiOiJpdGVtTmFtZSIsImNvaW5fY29kZSI6IlRSN05IcWplS1F4R1RDaThxOFpZNHBMOG90U3pnakxqNnQiLCJhbW91bnQiOiIxIiwicXVhbnRpdHkiOjF9XSwibWVyY2hhbnQiOnsibmFtZSI6Im1lcmNoYW50TmFtZSJ9fX0sImtpZCI6ImtleS1pZC1vbmUiLCJraXMiOiJ0ZXN0aW5nLmNvbSIsImtlcCI6IjFoIiwiaWF0IjoiMjAyNC0xMi0wM1QwMTo1ODo0NC40NTdaIiwiZXhwIjoiMjAyNC0xMi0wM1QwMjo1ODo0NC40NTdaIiwiaXNzIjoiaHR0cHM6Ly9leGFtcGxlLmNvbSJ9jY4wYEauQu4yZBFr7ddd0_7pv8SoLCK9_vjMZgGWzOkzd_qFgRZOSUnh8sHfQjtWoIu1hekQPWfswWRLZ5nwBA"
 
 	var handler = paseto.PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"pepe": 2, "mengano": "sultano"}, "kis": "test-kis"}
-	// var assertion = []byte(keys["publicKey"])
+	// var payload = UrlPayload{Url: "https://fluxis.us"}
+	var payload = InstructionPayload{
+		Payment: PaymentInstruction{
+			Id:      "unique-id",
+			Network: "TRON",
+			Address: "alsdkajhsdlkasdjakl",
+			Coin:    "asdasdasdads",
+			Amount:  "10",
+		},
+	}
+	var assertion = []byte(keys["publicKey"])
 
-	payloadString, _ := json.Marshal(payload)
+	var cryptoHandler = PaymentInstructionsBuilder{PasetoHandler: handler}
+
+	// payloadString, _ := json.Marshal(payload)
 
 	options := paseto.PasetoSignOptions{
 		Issuer:    "test-issuer.com",
 		KeyId:     "test-kid",
 		ExpiresIn: "1h",
+		Assertion: assertion,
 	}
 
-	token, err := handler.Sign(string(payloadString), keys["secretKey"], options)
+	// qrCrypto, errToken := cryptoHandler.CreateUrlPayload(payload, keys["secretKey"],
+	// QrCriptoCreateOptions{SignOptions: options, KeyIssuer: "test-key", KeyExpiration: "2025-12-12T15:10:10.000Z"})
 
-	if err != nil {
-		panic(err)
+	qrCrypto, errToken := cryptoHandler.CreatePaymentInstruction(payload, keys["secretKey"],
+		QrCriptoCreateOptions{SignOptions: options, KeyIssuer: "test-key", KeyExpiration: "2025-12-12T15:10:10.000Z"})
+
+	if errToken != nil {
+		panic(errToken)
 	}
 
-	// var cryptoHandler = PaymentInstructionsBuilder{PasetoHandler: handler}
-	// var options = QrCriptoReadOptions{IgnoreKeyExp: true}
+	fmt.Println(qrCrypto, len(qrCrypto))
 
-	// payment, errPayment := cryptoHandler.Read(qrCrypto, keys["publicKey"], options)
+	// token, err := handler.Sign(string(payloadString), keys["secretKey"], options)
 
-	// if errPayment != nil {
-	// 	panic(errPayment)
+	// if err != nil {
+	// 	panic(err)
 	// }
 
-	verifyToken, err := handler.Verify(token, keys["publicKey"], paseto.PasetoVerifyOptions{})
+	var readOptions = QrCriptoReadOptions{IgnoreKeyExp: true, VerifyOptions: paseto.PasetoVerifyOptions{IgnoreExp: true, Assertion: assertion}}
 
-	if err != nil {
-		panic(err)
+	payment, errPayment := cryptoHandler.Read(qrCrypto, keys["publicKey"], readOptions)
+
+	if errPayment != nil {
+		panic(errPayment)
 	}
 
-	fmt.Println(len(token))
-	fmt.Println(paseto.DecodeV4(token))
+	// verifyToken, err := handler.Verify(token, keys["publicKey"], paseto.PasetoVerifyOptions{})
 
-	fmt.Println("Verify token", verifyToken.Payload.Kid)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// fmt.Println(payment)
+	// fmt.Println(len(token))
+	// fmt.Println(paseto.DecodeV4(token))
+
+	// fmt.Println("Verify token", verifyToken.Payload.Kid)
+
+	fmt.Println(payment)
 
 }
