@@ -1,11 +1,11 @@
 package main
 
 import (
-	"crypto-payments-standard-protocol/paseto"
-	"crypto-payments-standard-protocol/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"payments-standard-protocol/paseto"
+	"payments-standard-protocol/utils"
 	"strings"
 	"time"
 

@@ -2,10 +2,10 @@ package paseto
 
 import (
 	"bytes"
-	"crypto-payments-standard-protocol/utils"
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
+	"payments-standard-protocol/utils"
 	"strings"
 )
 

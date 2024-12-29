@@ -1,9 +1,9 @@
 package paseto
 
 import (
-	"crypto-payments-standard-protocol/utils"
 	"encoding/json"
 	"errors"
+	"payments-standard-protocol/utils"
 	"time"
 
 	str2duration "github.com/xhit/go-str2duration/v2"
