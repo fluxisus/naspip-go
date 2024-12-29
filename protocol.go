@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"payments-standard-protocol/paseto"
-	"payments-standard-protocol/utils"
 	"strings"
 	"time"
+
+	"github.com/fluxisus/payments-standard-protocol-go/paseto"
+	"github.com/fluxisus/payments-standard-protocol-go/utils"
 
 	validator "github.com/tiendc/go-validator"
 )

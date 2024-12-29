@@ -3,8 +3,9 @@ package paseto
 import (
 	"encoding/json"
 	"errors"
-	"payments-standard-protocol/utils"
 	"time"
+
+	"github.com/fluxisus/payments-standard-protocol-go/utils"
 
 	str2duration "github.com/xhit/go-str2duration/v2"
 

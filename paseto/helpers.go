@@ -5,8 +5,9 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
-	"payments-standard-protocol/utils"
 	"strings"
+
+	"github.com/fluxisus/payments-standard-protocol-go/utils"
 )
 
 func GenerateKey(purpose string, format string) (map[string]string, error) {
