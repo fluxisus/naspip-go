@@ -1,11 +1,12 @@
 package main
 
 import (
-	"payments-standard-protocol/paseto"
-	"payments-standard-protocol/utils"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/fluxisus/payments-standard-protocol-go/paseto"
+	"github.com/fluxisus/payments-standard-protocol-go/utils"
 
 	"github.com/stretchr/testify/assert"
 )
