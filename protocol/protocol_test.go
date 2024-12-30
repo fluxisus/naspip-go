@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -53,8 +52,13 @@ func TestCreateOpenPayment(t *testing.T) {
 		t.Errorf("TestCreateOpenPayment FAIL --> %v, %v", err, qrToken)
 	}
 
+	decoded, _ := builder.Decode(qrToken)
+
 	assert.Equal(len(qrToken) > 0, true)
-	assert.Equal(strings.HasPrefix(qrToken, "qr-crypto."), true)
+	assert.Equal(decoded.Prefix, "qr-payment")
+	assert.Equal(decoded.KeyId, "key-id-one")
+	assert.Equal(decoded.KeyIssuer, "payment-processor.com")
+	assert.Equal(len(decoded.Token) > 0, true)
 }
 
 // "Should create payment instruction token with valid payload: is_open: false"
@@ -93,8 +97,13 @@ func TestCreateClosePayment(t *testing.T) {
 		t.Errorf("TestCreateClosePayment FAIL --> %v, %v", err, qrToken)
 	}
 
+	decoded, _ := builder.Decode(qrToken)
+
 	assert.Equal(len(qrToken) > 0, true)
-	assert.Equal(strings.HasPrefix(qrToken, "qr-crypto."), true)
+	assert.Equal(decoded.Prefix, "qr-payment")
+	assert.Equal(decoded.KeyId, "key-id-one")
+	assert.Equal(decoded.KeyIssuer, "payment-processor.com")
+	assert.Equal(len(decoded.Token) > 0, true)
 }
 
 // Should create url payload token
@@ -117,15 +126,20 @@ func TestCreateUrlPayment(t *testing.T) {
 
 	qrToken, err := builder.CreateUrlPayload(payload,
 		keys["secretKey"],
-		QrCriptoCreateOptions{SignOptions: options, KeyIssuer: "payment-processor.com", KeyExpiration: keyExpiration},
+		QrCriptoCreateOptions{SignOptions: options, KeyIssuer: "fluxis.us", KeyExpiration: keyExpiration},
 	)
 
 	if err != nil {
 		t.Errorf("TestCreateClosePayment FAIL --> %v, %v", err, qrToken)
 	}
 
+	decoded, _ := builder.Decode(qrToken)
+
 	assert.Equal(len(qrToken) > 0, true)
-	assert.Equal(strings.HasPrefix(qrToken, "qr-crypto."), true)
+	assert.Equal(decoded.Prefix, "qr-payment")
+	assert.Equal(decoded.KeyId, "key-id-one")
+	assert.Equal(decoded.KeyIssuer, "fluxis.us")
+	assert.Equal(len(decoded.Token) > 0, true)
 }
 
 // Should read payment instruction token
