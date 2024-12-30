@@ -13,6 +13,13 @@ import (
 	validator "github.com/tiendc/go-validator"
 )
 
+type QrPaymentTokenData struct {
+	Prefix    string `json:"prefix"`
+	KeyIssuer string `json:"kis"`
+	KeyId     string `json:"kid"`
+	Token     string `json:"token"`
+}
+
 type TokenPublicKeyOptions struct {
 	KeyId         string
 	KeyExpiration string
@@ -83,21 +90,33 @@ type PaymentInstructionsBuilder struct {
 	PasetoHandler paseto.PasetoV4
 }
 
-func (p PaymentInstructionsBuilder) Read(qrCrypto string, publicKey string, options QrCriptoReadOptions) (paseto.PasetoCompleteResult, error) {
-	var isValid = strings.HasPrefix(qrCrypto, "qr-crypto.")
+func (p PaymentInstructionsBuilder) Decode(qrPayment string) (QrPaymentTokenData, error) {
+	values := strings.Split(qrPayment, ";")
+
+	var isValid = len(values) == 4 && values[0] == "qr-payment"
 
 	if !isValid {
-		return paseto.PasetoCompleteResult{}, errors.New("invalid 'qr-crypto' token prefix")
+		return QrPaymentTokenData{}, errors.New("invalid 'qr-payment' token prefix")
 	}
 
-	token := strings.Replace(qrCrypto, "qr-crypto.", "", 1)
+	var data = QrPaymentTokenData{Prefix: values[0], KeyIssuer: values[1], KeyId: values[2], Token: values[3]}
+
+	return data, nil
+}
+
+func (p PaymentInstructionsBuilder) Read(qrPayment string, publicKey string, options QrCriptoReadOptions) (paseto.PasetoCompleteResult, error) {
+	decodedQr, errQr := p.Decode(qrPayment)
+
+	if errQr != nil {
+		return paseto.PasetoCompleteResult{}, errQr
+	}
 
 	options.VerifyOptions.IgnoreExp = false
 	options.VerifyOptions.IgnoreIat = false
 	options.VerifyOptions.Assertion = []byte(publicKey)
 
 	var data, err = p.PasetoHandler.Verify(
-		token,
+		decodedQr.Token,
 		publicKey,
 		options.VerifyOptions,
 	)
@@ -184,8 +203,9 @@ func (p PaymentInstructionsBuilder) create(data any, secretKey string, options Q
 		return "", errPaseto
 	}
 
-	qrCrypto := "qr-crypto." + pasetoToken
-	return qrCrypto, nil
+	qrPayment := strings.Join([]string{"qr-payment", keyOptions.KeyIssuer, keyOptions.KeyId, pasetoToken}, ";")
+
+	return qrPayment, nil
 }
 
 func validateParameters(secretKey string, optionsKey TokenPublicKeyOptions) (bool, error) {
