@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fluxisus/payments-standard-protocol-go/paseto"
-	"github.com/fluxisus/payments-standard-protocol-go/utils"
+	"github.com/fluxisus/payments-standard-protocol-go/v2/paseto"
+	"github.com/fluxisus/payments-standard-protocol-go/v2/utils"
 
 	validator "github.com/tiendc/go-validator"
 )

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/fluxisus/payments-standard-protocol-go/utils"
+	"github.com/fluxisus/payments-standard-protocol-go/v2/utils"
 )
 
 func GenerateKey(purpose string, format string) (map[string]string, error) {
