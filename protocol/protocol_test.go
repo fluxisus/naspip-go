@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fluxisus/payments-standard-protocol-go/paseto"
-	"github.com/fluxisus/payments-standard-protocol-go/utils"
+	"github.com/fluxisus/payments-standard-protocol-go/v2/paseto"
+	"github.com/fluxisus/payments-standard-protocol-go/v2/utils"
 
 	"github.com/stretchr/testify/assert"
 )
