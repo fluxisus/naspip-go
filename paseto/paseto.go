@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/fluxisus/payments-standard-protocol-go/utils"
+	"github.com/fluxisus/payments-standard-protocol-go/v2/utils"
 
 	str2duration "github.com/xhit/go-str2duration/v2"
 
