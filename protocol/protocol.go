@@ -93,10 +93,10 @@ type PaymentInstructionsBuilder struct {
 func (p PaymentInstructionsBuilder) Decode(qrPayment string) (QrPaymentTokenData, error) {
 	values := strings.Split(qrPayment, ";")
 
-	var isValid = len(values) == 4 && values[0] == "qr-payment"
+	var isValid = len(values) == 4 && values[0] == "naspip"
 
 	if !isValid {
-		return QrPaymentTokenData{}, errors.New("invalid 'qr-payment' token prefix")
+		return QrPaymentTokenData{}, errors.New("invalid naspip token prefix")
 	}
 
 	var data = QrPaymentTokenData{Prefix: values[0], KeyIssuer: values[1], KeyId: values[2], Token: values[3]}
@@ -203,7 +203,7 @@ func (p PaymentInstructionsBuilder) create(data any, secretKey string, options Q
 		return "", errPaseto
 	}
 
-	qrPayment := strings.Join([]string{"qr-payment", keyOptions.KeyIssuer, keyOptions.KeyId, pasetoToken}, ";")
+	qrPayment := strings.Join([]string{"naspip", keyOptions.KeyIssuer, keyOptions.KeyId, pasetoToken}, ";")
 
 	return qrPayment, nil
 }
