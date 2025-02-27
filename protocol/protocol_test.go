@@ -56,7 +56,7 @@ func TestCreateOpenPayment(t *testing.T) {
 	decoded, _ := builder.Decode(qrToken)
 
 	assert.Equal(len(qrToken) > 0, true)
-	assert.Equal(decoded.Prefix, "qr-payment")
+	assert.Equal(decoded.Prefix, "naspip")
 	assert.Equal(decoded.KeyId, "key-id-one")
 	assert.Equal(decoded.KeyIssuer, "payment-processor.com")
 	assert.Equal(len(decoded.Token) > 0, true)
@@ -102,7 +102,7 @@ func TestCreateClosePayment(t *testing.T) {
 	decoded, _ := builder.Decode(qrToken)
 
 	assert.Equal(len(qrToken) > 0, true)
-	assert.Equal(decoded.Prefix, "qr-payment")
+	assert.Equal(decoded.Prefix, "naspip")
 	assert.Equal(decoded.KeyId, "key-id-one")
 	assert.Equal(decoded.KeyIssuer, "payment-processor.com")
 	assert.Equal(len(decoded.Token) > 0, true)
@@ -155,7 +155,7 @@ func TestCreateClosePaymentWithOrderData(t *testing.T) {
 	decoded, _ := builder.Decode(qrToken)
 
 	assert.Equal(len(qrToken) > 0, true)
-	assert.Equal(decoded.Prefix, "qr-payment")
+	assert.Equal(decoded.Prefix, "naspip")
 	assert.Equal(decoded.KeyId, "key-id-one")
 	assert.Equal(decoded.KeyIssuer, "payment-processor.com")
 	assert.Equal(len(decoded.Token) > 0, true)
@@ -192,7 +192,7 @@ func TestCreateUrlPayment(t *testing.T) {
 	decoded, _ := builder.Decode(qrToken)
 
 	assert.Equal(len(qrToken) > 0, true)
-	assert.Equal(decoded.Prefix, "qr-payment")
+	assert.Equal(decoded.Prefix, "naspip")
 	assert.Equal(decoded.KeyId, "key-id-one")
 	assert.Equal(decoded.KeyIssuer, "fluxis.us")
 	assert.Equal(len(decoded.Token) > 0, true)
@@ -232,7 +232,7 @@ func TestCreateUrlPaymentWithOptions(t *testing.T) {
 	decoded, _ := builder.Decode(qrToken)
 
 	assert.Equal(len(qrToken) > 0, true)
-	assert.Equal(decoded.Prefix, "qr-payment")
+	assert.Equal(decoded.Prefix, "naspip")
 	assert.Equal(decoded.KeyId, "key-id-one")
 	assert.Equal(decoded.KeyIssuer, "fluxis.us")
 	assert.Equal(len(decoded.Token) > 0, true)
@@ -279,7 +279,7 @@ func TestCreateUrlPaymentWithOptionsAndOrder(t *testing.T) {
 	decoded, _ := builder.Decode(qrToken)
 
 	assert.Equal(len(qrToken) > 0, true)
-	assert.Equal(decoded.Prefix, "qr-payment")
+	assert.Equal(decoded.Prefix, "naspip")
 	assert.Equal(decoded.KeyId, "key-id-one")
 	assert.Equal(decoded.KeyIssuer, "fluxis.us")
 	assert.Equal(len(decoded.Token) > 0, true)
