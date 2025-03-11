@@ -22,3 +22,65 @@ This **protocol** seeks to solve the two problems mentioned above, **standardize
 This protocol proposes a standard format of the information to be shared between collector/payer and an asymmetric signature (`private/public key pair`) that allows validating the information.
 
 This protocol will facilitate and speed up the integration of new platforms to use crypto assets as payment methods.
+
+## Protocol Buffers Setup
+
+### Installation
+
+1. Install the protocol buffer compiler (protoc):
+
+```bash
+# Ubuntu/Debian
+sudo apt install -y protobuf-compiler
+
+# MacOS
+brew install protobuf
+
+# Verify installation
+protoc --version
+```
+
+2. Install the Go protocol buffers plugin:
+
+```bash
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+```
+
+3. Add the Go bin directory to your PATH:
+
+```bash
+export PATH="$PATH:$(go env GOPATH)/bin"
+```
+
+### Usage
+
+1. The protocol buffer definitions are in `encoding/protobuf/model.proto`
+
+2. To compile the protocol buffer definitions:
+
+```bash
+# From the project root
+protoc --go_out=. encoding/protobuf/model.proto
+```
+
+3. The generated code will be placed in the same directory as the .proto file
+
+### Benchmark Results
+
+Using Protocol Buffers instead of JSON provides:
+- 46% reduction in payload size before encoding
+- 25% reduction in final token size
+- Better encoding/decoding performance
+
+Example comparing payload sizes with real data:
+```
+JSON raw size: 343 bytes
+Protobuf raw size: 184 bytes
+```
+
+### Development
+
+When modifying the protocol buffer definitions:
+1. Edit `encoding/protobuf/model.proto`
+2. Recompile using the protoc command above
+3. The generated Go code will be updated automatically

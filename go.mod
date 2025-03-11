@@ -7,6 +7,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tiendc/go-validator v1.2.0
 	github.com/xhit/go-str2duration/v2 v2.1.0
+	google.golang.org/protobuf v1.36.5
 	zntr.io/paseto v1.3.0
 )
 
