@@ -50,13 +50,6 @@ message UrlPayload {
 	InstructionOrder order = 3 [json_name = "order"];
 }
 
-message PayloadData {
-  oneof data {
-    InstructionPayload instruction_payload = 1 [json_name = "instruction_payload"];
-    UrlPayload url_payload = 2 [json_name = "url_payload"];
-  }
-}
-
 message PasetoTokenData {
 	string iss = 1;
 	string sub = 2;
