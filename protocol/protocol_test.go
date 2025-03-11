@@ -126,7 +126,7 @@ func TestCreateClosePaymentWithOrderData(t *testing.T) {
 			ExpiresAt:     time.Now().Add(time.Hour * 3).UnixMilli(),
 		},
 		Order: InstructionOrder{
-			TotalAmount: "1000",
+			Total:       "1000",
 			CoinCode:    "ARS",
 			Description: "T-Shirt",
 			Merchant:    InstructionMerchant{Name: "Ecommerce"},
@@ -250,7 +250,7 @@ func TestCreateUrlPaymentWithOptionsAndOrder(t *testing.T) {
 		Url:            "https://www.my-ecommerce.com/checkout?id=lasdh-asdlsa-ads",
 		PaymentOptions: []string{"ntrc20_tcontract-token-1", "npolygon_tcontract_address_usdt"},
 		Order: InstructionOrder{
-			TotalAmount: "1000",
+			Total:       "1000",
 			CoinCode:    "ARS",
 			Description: "T-Shirt",
 			Merchant:    InstructionMerchant{Name: "Ecommerce"},

@@ -49,7 +49,7 @@ type PaymentInstruction struct {
 }
 
 type InstructionOrder struct {
-	TotalAmount string              `json:"total"`
+	Total       string              `json:"total"`
 	CoinCode    string              `json:"coin_code"`
 	Description string              `json:"description,omitempty"`
 	Merchant    InstructionMerchant `json:"merchant,omitempty"`
@@ -277,8 +277,8 @@ func validateUrlPayload(payload UrlPayload) (bool, error) {
 		validator.When(payload.Order.Description != "").Then(validator.StrLen(&payload.Order.Description, 1, 200).OnError(
 			validator.SetField("order_description", nil),
 		)),
-		validator.When(payload.Order.TotalAmount != "").Then(
-			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.TotalAmount)).OnError(
+		validator.When(payload.Order.Total != "").Then(
+			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.Total)).OnError(
 				validator.SetField("order_total_amount", nil),
 				validator.SetCustomKey("ORDER_TOTAL_AMOUNT_INVALID"),
 			)),
@@ -369,9 +369,9 @@ func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error)
 		validator.When(payload.Order.Description != "").Then(validator.StrLen(&payload.Order.Description, 1, 200).OnError(
 			validator.SetField("order_description", nil),
 		)),
-		validator.When(payload.Order.TotalAmount != "").Then(
-			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.TotalAmount)).OnError(
-				validator.SetField("order_total_amount", nil),
+		validator.When(payload.Order.Total != "").Then(
+			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.Total)).OnError(
+				validator.SetField("order_total", nil),
 				validator.SetCustomKey("ORDER_TOTAL_AMOUNT_INVALID"),
 			)),
 		validator.When(payload.Order.Merchant.Name != "").Then(validator.StrLen(&payload.Order.Merchant.Name, 3, 100).OnError(
@@ -390,7 +390,7 @@ func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error)
 			vld.Validate(
 				validator.When(elem.Description != "").Then(
 					validator.StrLen(&elem.Description, 3, 100).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_decription", index), nil),
+						validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
 					),
 					validator.NumGT(&elem.Quantity, 0).OnError(
 						validator.SetField(fmt.Sprintf("order_item_[%d]_quantity", index), nil),
