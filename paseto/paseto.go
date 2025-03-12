@@ -1,10 +1,10 @@
 package paseto
 
 import (
-	"encoding/json"
 	"errors"
 	"time"
 
+	"github.com/fluxisus/payments-standard-protocol-go/v2/encoding/protobuf"
 	"github.com/fluxisus/payments-standard-protocol-go/v2/utils"
 
 	str2duration "github.com/xhit/go-str2duration/v2"
@@ -13,17 +13,17 @@ import (
 )
 
 type PasetoTokenData struct {
-	Iss     string         `json:"iss"`
-	Sub     string         `json:"sub"`
-	Aud     string         `json:"aud"`
-	Exp     string         `json:"exp"`
-	Nbf     string         `json:"nbf"`
-	Iat     string         `json:"iat"`
-	Jti     string         `json:"jti"`
-	Kid     string         `json:"kid"`
-	Kep     string         `json:"kep"`
-	Kis     string         `json:"kis"`
-	Payload map[string]any `json:"payload"`
+	Iss  string                 `json:"iss"`
+	Sub  string                 `json:"sub"`
+	Aud  string                 `json:"aud"`
+	Exp  string                 `json:"exp"`
+	Nbf  string                 `json:"nbf"`
+	Iat  string                 `json:"iat"`
+	Jti  string                 `json:"jti"`
+	Kid  string                 `json:"kid"`
+	Kep  string                 `json:"kep"`
+	Kis  string                 `json:"kis"`
+	Data map[string]interface{} `json:"data"`
 }
 
 type PasetoCompleteResult struct {
@@ -35,10 +35,10 @@ type PasetoCompleteResult struct {
 
 type PasetoV4Handler struct{}
 
-func (p PasetoV4Handler) Sign(payload string, privateKey string, options PasetoSignOptions) (string, error) {
-	var data PasetoTokenData
+func (p PasetoV4Handler) Sign(payload []byte, privateKey string, options PasetoSignOptions) (string, error) {
+	var data protobuf.PasetoTokenData
 
-	if err := json.Unmarshal([]byte(payload), &data); err != nil {
+	if err := protobuf.DecodeProto(payload, &data); err != nil {
 		return "", err
 	}
 
@@ -83,34 +83,50 @@ func (p PasetoV4Handler) Sign(payload string, privateKey string, options PasetoS
 
 	var key = GetPrivateKey(privateKey)
 
-	dataJson, _ := json.Marshal(data)
+	dataBytes, err := protobuf.EncodeProto(&data)
 
-	return pasetoV4.Sign(dataJson, key, options.Footer, options.Assertion)
+	if err != nil {
+		return "", err
+	}
+
+	return pasetoV4.Sign(dataBytes, key, options.Footer, options.Assertion)
 }
 
-func (p PasetoV4Handler) Verify(token string, publicKey string, options PasetoVerifyOptions) (PasetoCompleteResult, error) {
+func (p PasetoV4Handler) Verify(token string, publicKey string, options PasetoVerifyOptions) (*PasetoCompleteResult, error) {
 
 	var key = GetPublicKey(publicKey)
 
-	tokenData, err := pasetoV4.Verify(token, key, options.Footer, options.Assertion)
+	tokenBytes, err := pasetoV4.Verify(token, key, options.Footer, options.Assertion)
 
 	if err != nil {
-		return PasetoCompleteResult{}, err
+		return nil, err
+	}
+
+	var tokenData protobuf.PasetoTokenData
+
+	err = protobuf.DecodeProto(tokenBytes, &tokenData)
+
+	if err != nil {
+		return nil, err
 	}
 
 	var payload PasetoTokenData
 
-	json.Unmarshal(tokenData, &payload)
+	err = protobuf.ConvertProtoToGo(&tokenData, &payload)
+
+	if err != nil {
+		return nil, err
+	}
 
 	verifyErr := assertPayload(payload, options)
 
 	if verifyErr != nil {
-		return PasetoCompleteResult{}, verifyErr
+		return nil, verifyErr
 	}
 
 	var data = PasetoCompleteResult{Version: "v4", Purpose: "public", Footer: []byte{}, Payload: payload}
 
-	return data, err
+	return &data, nil
 }
 
 func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
@@ -133,40 +149,48 @@ func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
 	}
 
 	// Check iat
-	if payload.Iat != "" {
+	if !options.IgnoreIat {
+		if payload.Iat == "" {
+			return errors.New("payload.iat is required")
+		}
+
 		iat, err := time.Parse(utils.RFC3339Mili, payload.Iat)
 
 		if err != nil {
 			return errors.New("payload.iat must be a valid RFC3339 string")
 		}
 
-		if !options.IgnoreIat && now.Before(iat) {
+		if now.Before(iat) {
 			return errors.New("token issued in the future")
 		}
 	}
 
 	// Check nbf
-	if payload.Nbf != "" {
+	if !options.IgnoreNbf && payload.Nbf != "" {
 		nbf, err := time.Parse(utils.RFC3339Mili, payload.Nbf)
 
 		if err != nil {
 			return errors.New("payload.nbf must be a valid RFC3339 string")
 		}
 
-		if !options.IgnoreNbf && now.Before(nbf) {
+		if now.Before(nbf) {
 			return errors.New("token is not active yet")
 		}
 	}
 
 	// Check exp
-	if payload.Exp != "" {
+	if !options.IgnoreExp {
+		if payload.Exp == "" {
+			return errors.New("payload.exp is required")
+		}
+
 		exp, err := time.Parse(utils.RFC3339Mili, payload.Exp)
 
 		if err != nil {
 			return errors.New("payload.exp must be a valid RFC3339 string")
 		}
 
-		if !options.IgnoreExp && now.After(exp) {
+		if now.After(exp) {
 			return errors.New("token is expired")
 		}
 	}

@@ -1,15 +1,14 @@
 package protocol
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/fluxisus/payments-standard-protocol-go/v2/encoding/protobuf"
 	"github.com/fluxisus/payments-standard-protocol-go/v2/paseto"
 	"github.com/fluxisus/payments-standard-protocol-go/v2/utils"
-
 	validator "github.com/tiendc/go-validator"
 )
 
@@ -38,19 +37,19 @@ type InstructionPayload struct {
 }
 
 type PaymentInstruction struct {
-	Id           string `json:"id"`
-	Address      string `json:"address"`
-	AddressTag   string `json:"address_tag,omitempty"`
-	NetworkToken string `json:"network_token"`
-	IsOpen       bool   `json:"is_open"`
-	Amount       string `json:"amount,omitempty"`
-	MinAmount    string `json:"min_amount,omitempty"`
-	MaxAmount    string `json:"max_amount,omitempty"`
-	ExpiresAt    int64  `json:"expires_at"`
+	Id            string `json:"id"`
+	Address       string `json:"address"`
+	AddressTag    string `json:"address_tag,omitempty"`
+	UniqueAssetId string `json:"unique_asset_id"`
+	IsOpen        bool   `json:"is_open"`
+	Amount        string `json:"amount,omitempty"`
+	MinAmount     string `json:"min_amount,omitempty"`
+	MaxAmount     string `json:"max_amount,omitempty"`
+	ExpiresAt     int64  `json:"expires_at"`
 }
 
 type InstructionOrder struct {
-	TotalAmount string              `json:"total_amount"`
+	Total       string              `json:"total"`
 	CoinCode    string              `json:"coin_code"`
 	Description string              `json:"description,omitempty"`
 	Merchant    InstructionMerchant `json:"merchant,omitempty"`
@@ -104,11 +103,11 @@ func (p PaymentInstructionsBuilder) Decode(qrPayment string) (QrPaymentTokenData
 	return data, nil
 }
 
-func (p PaymentInstructionsBuilder) Read(qrPayment string, publicKey string, options QrCriptoReadOptions) (paseto.PasetoCompleteResult, error) {
+func (p PaymentInstructionsBuilder) Read(qrPayment string, publicKey string, options QrCriptoReadOptions) (*paseto.PasetoCompleteResult, error) {
 	decodedQr, errQr := p.Decode(qrPayment)
 
 	if errQr != nil {
-		return paseto.PasetoCompleteResult{}, errQr
+		return nil, errQr
 	}
 
 	options.VerifyOptions.IgnoreExp = false
@@ -122,26 +121,26 @@ func (p PaymentInstructionsBuilder) Read(qrPayment string, publicKey string, opt
 	)
 
 	if err != nil {
-		return paseto.PasetoCompleteResult{}, err
+		return nil, err
 	}
 
 	if options.KeyId != "" && data.Payload.Kid != options.KeyId {
-		return paseto.PasetoCompleteResult{}, errors.New("invalid Key ID")
+		return nil, errors.New("invalid Key ID")
 	}
 
 	if options.KeyIssuer != "" && options.KeyIssuer != data.Payload.Kis {
-		return paseto.PasetoCompleteResult{}, errors.New("invalid Key Issuer")
+		return nil, errors.New("invalid Key Issuer")
 	}
 
 	if !options.IgnoreKeyExp {
 		keyExpiredAt, err := time.Parse(time.RFC3339, data.Payload.Kep)
 
 		if err != nil {
-			return paseto.PasetoCompleteResult{}, errors.New("invalid key expiration")
+			return nil, errors.New("invalid key expiration")
 		}
 
 		if time.Now().After(keyExpiredAt) {
-			return paseto.PasetoCompleteResult{}, errors.New("expired Key")
+			return nil, errors.New("expired Key")
 		}
 	}
 
@@ -156,7 +155,18 @@ func (p PaymentInstructionsBuilder) CreateUrlPayload(data UrlPayload, secretKey 
 		return "", err
 	}
 
-	return p.create(data, secretKey, options)
+	protoPayload := &protobuf.UrlPayload{}
+	if err := protobuf.ConvertGoToProto(data, protoPayload); err != nil {
+		return "", err
+	}
+
+	var payload = &protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_UrlPayload{
+			UrlPayload: protoPayload,
+		},
+	}
+
+	return p.create(payload, secretKey, options)
 }
 
 func (p PaymentInstructionsBuilder) CreatePaymentInstruction(data InstructionPayload, secretKey string, options QrCriptoCreateOptions) (string, error) {
@@ -166,11 +176,21 @@ func (p PaymentInstructionsBuilder) CreatePaymentInstruction(data InstructionPay
 	if !isValid {
 		return "", err
 	}
+	protoPayload := &protobuf.InstructionPayload{}
+	if err := protobuf.ConvertGoToProto(data, protoPayload); err != nil {
+		return "", err
+	}
 
-	return p.create(data, secretKey, options)
+	var payload = &protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: protoPayload,
+		},
+	}
+
+	return p.create(payload, secretKey, options)
 }
 
-func (p PaymentInstructionsBuilder) create(data any, secretKey string, options QrCriptoCreateOptions) (string, error) {
+func (p PaymentInstructionsBuilder) create(data *protobuf.PasetoTokenData, secretKey string, options QrCriptoCreateOptions) (string, error) {
 
 	keyOptions := TokenPublicKeyOptions{KeyId: options.SignOptions.KeyId, KeyIssuer: options.KeyIssuer, KeyExpiration: options.KeyExpiration}
 
@@ -189,15 +209,17 @@ func (p PaymentInstructionsBuilder) create(data any, secretKey string, options Q
 		options.SignOptions.ExpiresIn = "10m"
 	}
 
-	var payload = map[string]any{"payload": data, "kid": keyOptions.KeyId, "kis": keyOptions.KeyIssuer, "kep": keyOptions.KeyExpiration}
+	data.Kid = keyOptions.KeyId
+	data.Kis = keyOptions.KeyIssuer
+	data.Kep = keyOptions.KeyExpiration
 
-	payloadString, errJson := json.Marshal(payload)
+	payloadBytes, errJson := protobuf.EncodeProto(data)
 
 	if errJson != nil {
 		return "", errors.New("invalid Payload Json")
 	}
 
-	pasetoToken, errPaseto := p.PasetoHandler.Sign(string(payloadString), secretKey, options.SignOptions)
+	pasetoToken, errPaseto := p.PasetoHandler.Sign(payloadBytes, secretKey, options.SignOptions)
 
 	if errPaseto != nil {
 		return "", errPaseto
@@ -255,8 +277,8 @@ func validateUrlPayload(payload UrlPayload) (bool, error) {
 		validator.When(payload.Order.Description != "").Then(validator.StrLen(&payload.Order.Description, 1, 200).OnError(
 			validator.SetField("order_description", nil),
 		)),
-		validator.When(payload.Order.TotalAmount != "").Then(
-			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.TotalAmount)).OnError(
+		validator.When(payload.Order.Total != "").Then(
+			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.Total)).OnError(
 				validator.SetField("order_total_amount", nil),
 				validator.SetCustomKey("ORDER_TOTAL_AMOUNT_INVALID"),
 			)),
@@ -320,8 +342,8 @@ func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error)
 		validator.StrLen(&payload.Payment.AddressTag, 0, 100).OnError(
 			validator.SetField("payment_address_tag", nil),
 		),
-		validator.StrLen(&payload.Payment.NetworkToken, 1, 100).OnError(
-			validator.SetField("payment_network_token", nil),
+		validator.StrLen(&payload.Payment.UniqueAssetId, 1, 100).OnError(
+			validator.SetField("payment_unique_asset_id", nil),
 		),
 
 		validator.When(payload.Payment.IsOpen).Then(
@@ -347,9 +369,9 @@ func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error)
 		validator.When(payload.Order.Description != "").Then(validator.StrLen(&payload.Order.Description, 1, 200).OnError(
 			validator.SetField("order_description", nil),
 		)),
-		validator.When(payload.Order.TotalAmount != "").Then(
-			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.TotalAmount)).OnError(
-				validator.SetField("order_total_amount", nil),
+		validator.When(payload.Order.Total != "").Then(
+			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.Total)).OnError(
+				validator.SetField("order_total", nil),
 				validator.SetCustomKey("ORDER_TOTAL_AMOUNT_INVALID"),
 			)),
 		validator.When(payload.Order.Merchant.Name != "").Then(validator.StrLen(&payload.Order.Merchant.Name, 3, 100).OnError(
@@ -362,13 +384,13 @@ func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error)
 			validator.SetField("order_merchant_tax_id", nil),
 		)),
 		validator.When(payload.Order.Merchant.Image != "").Then(validator.StrIsRequestURI(&payload.Order.Merchant.Image).OnError(
-			validator.SetField("order_merchant_image_url", nil),
+			validator.SetField("order_merchant_image", nil),
 		)),
 		validator.Slice(payload.Order.Items).ForEach(func(elem InstructionItem, index int, vld validator.ItemValidator) {
 			vld.Validate(
 				validator.When(elem.Description != "").Then(
 					validator.StrLen(&elem.Description, 3, 100).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_decription", index), nil),
+						validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
 					),
 					validator.NumGT(&elem.Quantity, 0).OnError(
 						validator.SetField(fmt.Sprintf("order_item_[%d]_quantity", index), nil),

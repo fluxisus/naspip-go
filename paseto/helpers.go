@@ -3,10 +3,10 @@ package paseto
 import (
 	"bytes"
 	"crypto/ed25519"
-	"encoding/json"
 	"errors"
 	"strings"
 
+	"github.com/fluxisus/payments-standard-protocol-go/v2/encoding/protobuf"
 	"github.com/fluxisus/payments-standard-protocol-go/v2/utils"
 )
 
@@ -99,9 +99,17 @@ func DecodeV4(token string) (PasetoCompleteResult, error) {
 
 	var rawPayload = raw[0 : len(raw)-64]
 
+	var parseProto protobuf.PasetoTokenData
+
+	err := protobuf.DecodeProto(rawPayload, &parseProto)
+
+	if err != nil {
+		return PasetoCompleteResult{}, err
+	}
+
 	var parsePayload PasetoTokenData
 
-	if err := json.Unmarshal(rawPayload, &parsePayload); err != nil {
+	if err = protobuf.ConvertProtoToGo(&parseProto, &parsePayload); err != nil {
 		return PasetoCompleteResult{}, err
 	}
 

@@ -25,13 +25,13 @@ func TestCreateOpenPayment(t *testing.T) {
 
 	var payload = InstructionPayload{
 		Payment: PaymentInstruction{
-			Id:           "payment-id",
-			NetworkToken: "ntrc20_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-			Address:      "crypto-address",
-			IsOpen:       true,
-			MinAmount:    "1",
-			MaxAmount:    "100",
-			ExpiresAt:    time.Now().Add(time.Minute * 5).UnixMilli(),
+			Id:            "payment-id",
+			UniqueAssetId: "ntrc20_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+			Address:       "crypto-address",
+			IsOpen:        true,
+			MinAmount:     "1",
+			MaxAmount:     "100",
+			ExpiresAt:     time.Now().Add(time.Minute * 5).UnixMilli(),
 		},
 	}
 
@@ -72,12 +72,12 @@ func TestCreateClosePayment(t *testing.T) {
 
 	var payload = InstructionPayload{
 		Payment: PaymentInstruction{
-			Id:           "payment-id",
-			NetworkToken: "ntrc20_TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-			Address:      "crypto-address",
-			IsOpen:       false,
-			Amount:       "100",
-			ExpiresAt:    time.Now().Add(time.Hour * 3).UnixMilli(),
+			Id:            "payment-id",
+			UniqueAssetId: "ntrc20_TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+			Address:       "crypto-address",
+			IsOpen:        false,
+			Amount:        "100",
+			ExpiresAt:     time.Now().Add(time.Hour * 3).UnixMilli(),
 		},
 	}
 
@@ -118,15 +118,15 @@ func TestCreateClosePaymentWithOrderData(t *testing.T) {
 
 	var payload = InstructionPayload{
 		Payment: PaymentInstruction{
-			Id:           "payment-id",
-			NetworkToken: "ntrc20_TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-			Address:      "crypto-address",
-			IsOpen:       false,
-			Amount:       "100",
-			ExpiresAt:    time.Now().Add(time.Hour * 3).UnixMilli(),
+			Id:            "payment-id",
+			UniqueAssetId: "ntrc20_TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+			Address:       "crypto-address",
+			IsOpen:        false,
+			Amount:        "100",
+			ExpiresAt:     time.Now().Add(time.Hour * 3).UnixMilli(),
 		},
 		Order: InstructionOrder{
-			TotalAmount: "1000",
+			Total:       "1000",
 			CoinCode:    "ARS",
 			Description: "T-Shirt",
 			Merchant:    InstructionMerchant{Name: "Ecommerce"},
@@ -250,7 +250,7 @@ func TestCreateUrlPaymentWithOptionsAndOrder(t *testing.T) {
 		Url:            "https://www.my-ecommerce.com/checkout?id=lasdh-asdlsa-ads",
 		PaymentOptions: []string{"ntrc20_tcontract-token-1", "npolygon_tcontract_address_usdt"},
 		Order: InstructionOrder{
-			TotalAmount: "1000",
+			Total:       "1000",
 			CoinCode:    "ARS",
 			Description: "T-Shirt",
 			Merchant:    InstructionMerchant{Name: "Ecommerce"},
@@ -295,12 +295,12 @@ func TestReadPaymentInstruction(t *testing.T) {
 
 	var payload = InstructionPayload{
 		Payment: PaymentInstruction{
-			Id:           "payment-id",
-			NetworkToken: "ntrc20_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-			Address:      "crypto-address",
-			IsOpen:       false,
-			Amount:       "100",
-			ExpiresAt:    time.Now().Add(time.Hour * 3).UnixMilli(),
+			Id:            "payment-id",
+			UniqueAssetId: "ntrc20_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+			Address:       "crypto-address",
+			IsOpen:        false,
+			Amount:        "100",
+			ExpiresAt:     time.Now().Add(time.Hour * 3).UnixMilli(),
 		},
 	}
 
@@ -346,12 +346,12 @@ func TestReadPaymentInstructionInvalidIssuer(t *testing.T) {
 
 	var payload = InstructionPayload{
 		Payment: PaymentInstruction{
-			Id:           "payment-id",
-			NetworkToken: "ntrc20_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-			Address:      "crypto-address",
-			IsOpen:       false,
-			Amount:       "100",
-			ExpiresAt:    time.Now().Add(time.Hour * 3).UnixMilli(),
+			Id:            "payment-id",
+			UniqueAssetId: "ntrc20_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+			Address:       "crypto-address",
+			IsOpen:        false,
+			Amount:        "100",
+			ExpiresAt:     time.Now().Add(time.Hour * 3).UnixMilli(),
 		},
 	}
 
@@ -391,12 +391,12 @@ func TestReadUrlPaymentInvaliKeyIssuer(t *testing.T) {
 
 	var payload = InstructionPayload{
 		Payment: PaymentInstruction{
-			Id:           "payment-id",
-			NetworkToken: "ntrc20_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-			Address:      "crypto-address",
-			IsOpen:       false,
-			Amount:       "100",
-			ExpiresAt:    time.Now().Add(time.Hour * 3).UnixMilli(),
+			Id:            "payment-id",
+			UniqueAssetId: "ntrc20_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+			Address:       "crypto-address",
+			IsOpen:        false,
+			Amount:        "100",
+			ExpiresAt:     time.Now().Add(time.Hour * 3).UnixMilli(),
 		},
 	}
 
