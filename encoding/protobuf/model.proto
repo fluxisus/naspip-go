@@ -27,7 +27,7 @@ message InstructionItem {
   string description = 1 [json_name = "description"];
   string amount = 2 [json_name = "amount"];
   string coin_code = 3 [json_name = "coin_code"];
-  string price = 4 [json_name = "unit_price"];
+  string unit_price = 4 [json_name = "unit_price"];
   int32 quantity = 5 [json_name = "quantity"];
 }
 

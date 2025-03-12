@@ -149,40 +149,48 @@ func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
 	}
 
 	// Check iat
-	if payload.Iat != "" {
+	if !options.IgnoreIat {
+		if payload.Iat == "" {
+			return errors.New("payload.iat is required")
+		}
+
 		iat, err := time.Parse(utils.RFC3339Mili, payload.Iat)
 
 		if err != nil {
 			return errors.New("payload.iat must be a valid RFC3339 string")
 		}
 
-		if !options.IgnoreIat && now.Before(iat) {
+		if now.Before(iat) {
 			return errors.New("token issued in the future")
 		}
 	}
 
 	// Check nbf
-	if payload.Nbf != "" {
+	if !options.IgnoreNbf && payload.Nbf != "" {
 		nbf, err := time.Parse(utils.RFC3339Mili, payload.Nbf)
 
 		if err != nil {
 			return errors.New("payload.nbf must be a valid RFC3339 string")
 		}
 
-		if !options.IgnoreNbf && now.Before(nbf) {
+		if now.Before(nbf) {
 			return errors.New("token is not active yet")
 		}
 	}
 
 	// Check exp
-	if payload.Exp != "" {
+	if !options.IgnoreExp {
+		if payload.Exp == "" {
+			return errors.New("payload.exp is required")
+		}
+
 		exp, err := time.Parse(utils.RFC3339Mili, payload.Exp)
 
 		if err != nil {
 			return errors.New("payload.exp must be a valid RFC3339 string")
 		}
 
-		if !options.IgnoreExp && now.After(exp) {
+		if now.After(exp) {
 			return errors.New("token is expired")
 		}
 	}

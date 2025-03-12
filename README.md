@@ -65,19 +65,6 @@ protoc --go_out=. encoding/protobuf/model.proto
 
 3. The generated code will be placed in the same directory as the .proto file
 
-### Benchmark Results
-
-Using Protocol Buffers instead of JSON provides:
-- 46% reduction in payload size before encoding
-- 25% reduction in final token size
-- Better encoding/decoding performance
-
-Example comparing payload sizes with real data:
-```
-JSON raw size: 343 bytes
-Protobuf raw size: 184 bytes
-```
-
 ### Development
 
 When modifying the protocol buffer definitions:
