@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fluxisus/payments-standard-protocol-go/v2/encoding/protobuf"
-	"github.com/fluxisus/payments-standard-protocol-go/v2/paseto"
-	"github.com/fluxisus/payments-standard-protocol-go/v2/utils"
+	"github.com/fluxisus/payments-standard-protocol-go/v3/encoding/protobuf"
+	"github.com/fluxisus/payments-standard-protocol-go/v3/paseto"
+	"github.com/fluxisus/payments-standard-protocol-go/v3/utils"
 	validator "github.com/tiendc/go-validator"
 )
 

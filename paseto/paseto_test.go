@@ -3,8 +3,10 @@ package paseto
 import (
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/fluxisus/payments-standard-protocol-go/v2/encoding/protobuf"
+	"github.com/fluxisus/payments-standard-protocol-go/v3/encoding/protobuf"
+	"github.com/fluxisus/payments-standard-protocol-go/v3/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -81,7 +83,7 @@ func TestSingAndVerify(t *testing.T) {
 
 	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, errSign := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{})
+	token, errSign := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{ExpiresIn: "1h"})
 
 	if errSign != nil {
 		t.Errorf("TestSingAndVerify Sign FAIL --> %v", errSign)
@@ -192,9 +194,11 @@ func TestInvalidTokenByMaxAge(t *testing.T) {
 
 	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{IssuedAt: "2000-11-11T15:15:15Z"})
+	issuedAt := time.Now().UTC().Add(-1000 * time.Hour).Format(utils.RFC3339Mili)
 
-	verified, err := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{MaxTokenAge: "10000h"})
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{IssuedAt: issuedAt, ExpiresIn: "10000h"})
+
+	verified, err := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{MaxTokenAge: "100h"})
 
 	assert.Nil(verified)
 	assert.EqualError(err, "maxTokenAge exceeded")

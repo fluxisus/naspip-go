@@ -1,4 +1,4 @@
-module github.com/fluxisus/payments-standard-protocol-go/v2
+module github.com/fluxisus/payments-standard-protocol-go/v3
 
 go 1.22.4
 

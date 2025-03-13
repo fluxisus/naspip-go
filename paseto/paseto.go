@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/fluxisus/payments-standard-protocol-go/v2/encoding/protobuf"
-	"github.com/fluxisus/payments-standard-protocol-go/v2/utils"
+	"github.com/fluxisus/payments-standard-protocol-go/v3/encoding/protobuf"
+	"github.com/fluxisus/payments-standard-protocol-go/v3/utils"
 
 	str2duration "github.com/xhit/go-str2duration/v2"
 
