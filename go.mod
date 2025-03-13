@@ -1,4 +1,4 @@
-module github.com/fluxisus/payments-standard-protocol-go/v3
+module github.com/fluxisus/naspip-go/v3
 
 go 1.22.4
 
