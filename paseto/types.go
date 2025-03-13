@@ -26,6 +26,6 @@ type PasetoVerifyOptions struct {
 }
 
 type PasetoV4 interface {
-	Sign(payload string, privateKey string, options PasetoSignOptions) (string, error)
-	Verify(token string, publicKey string, options PasetoVerifyOptions) (PasetoCompleteResult, error)
+	Sign(payload []byte, privateKey string, options PasetoSignOptions) (string, error)
+	Verify(token string, publicKey string, options PasetoVerifyOptions) (*PasetoCompleteResult, error)
 }

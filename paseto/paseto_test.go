@@ -1,10 +1,12 @@
 package paseto
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/fluxisus/payments-standard-protocol-go/v3/encoding/protobuf"
+	"github.com/fluxisus/payments-standard-protocol-go/v3/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,9 +32,18 @@ func TestDecode(t *testing.T) {
 
 	issuedAt := "2024-12-08T22:27:20.012Z"
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"pepe": 2, "mengano": "sultano"}, "kis": "test-kis"}
+	var payload = protobuf.PasetoTokenData{
+		Kis: "test-kis",
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
 	options := PasetoSignOptions{
 		Issuer:    "test-issuer.com",
@@ -41,7 +52,7 @@ func TestDecode(t *testing.T) {
 		IssuedAt:  issuedAt,
 	}
 
-	token, _ := handler.Sign(string(payloadString), keys["secretKey"], options)
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], options)
 
 	decoded, err := DecodeV4(token)
 
@@ -60,11 +71,19 @@ func TestSingAndVerify(t *testing.T) {
 	assert := assert.New(t)
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, errSign := handler.Sign(string(payloadString), keys["secretKey"], PasetoSignOptions{})
+	token, errSign := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{ExpiresIn: "1h"})
 
 	if errSign != nil {
 		t.Errorf("TestSingAndVerify Sign FAIL --> %v", errSign)
@@ -76,18 +95,26 @@ func TestSingAndVerify(t *testing.T) {
 		t.Errorf("TestDecode FAIL --> %v, %v", err, token)
 	}
 
-	assert.Equal(payload["payload"], verified.Payload.Payload)
+	assert.Equal(payload.GetInstructionPayload().Payment.Id, verified.Payload.Data["payment"].(map[string]interface{})["id"])
 }
 
 // Should fail to sign without a valid secret key
 func TestFailSingWithoutValidSecret(t *testing.T) {
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	assert.Panics(t, func() { handler.Sign(string(payloadString), "not-secret-key", PasetoSignOptions{}) }, "The code panics")
+	assert.Panics(t, func() { handler.Sign(payloadBytes, "not-secret-key", PasetoSignOptions{}) }, "The code panics")
 }
 
 // Should not verify a token with wrong public key
@@ -95,15 +122,21 @@ func TestFailVerifyWithWrongPublicKey(t *testing.T) {
 	assert := assert.New(t)
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_UrlPayload{
+			UrlPayload: &protobuf.UrlPayload{
+				Url: "test-url",
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, _ := handler.Sign(string(payloadString), keys["secretKey"], PasetoSignOptions{})
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{})
 
 	verified, err := handler.Verify(token, keys["otherPublicKey"], PasetoVerifyOptions{})
 
-	assert.Nil(verified.Payload.Payload)
+	assert.Nil(verified)
 	assert.EqualError(err, "paseto: invalid token signature")
 }
 
@@ -115,7 +148,7 @@ func TestFailVerifyInvalidTokenFormat(t *testing.T) {
 
 	verified, err := handler.Verify("not-token", keys["publicKey"], PasetoVerifyOptions{})
 
-	assert.Nil(verified.Payload.Payload)
+	assert.Nil(verified)
 	assert.EqualError(err, "paseto: invalid token")
 }
 
@@ -124,15 +157,23 @@ func TestExpiredToken(t *testing.T) {
 	assert := assert.New(t)
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, _ := handler.Sign(string(payloadString), keys["secretKey"], PasetoSignOptions{ExpiresIn: "0s"})
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{ExpiresIn: "0s"})
 
 	verified, err := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{})
 
-	assert.Nil(verified.Payload.Payload)
+	assert.Nil(verified)
 	assert.EqualError(err, "token is expired")
 }
 
@@ -141,15 +182,25 @@ func TestInvalidTokenByMaxAge(t *testing.T) {
 	assert := assert.New(t)
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, _ := handler.Sign(string(payloadString), keys["secretKey"], PasetoSignOptions{IssuedAt: "2000-11-11T15:15:15Z"})
+	issuedAt := time.Now().UTC().Add(-1000 * time.Hour).Format(utils.RFC3339Mili)
 
-	verified, err := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{MaxTokenAge: "10000h"})
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{IssuedAt: issuedAt, ExpiresIn: "10000h"})
 
-	assert.Nil(verified.Payload.Payload)
+	verified, err := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{MaxTokenAge: "100h"})
+
+	assert.Nil(verified)
 	assert.EqualError(err, "maxTokenAge exceeded")
 }
 
@@ -158,15 +209,23 @@ func TestInvalidTokenByNbf(t *testing.T) {
 	assert := assert.New(t)
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, _ := handler.Sign(string(payloadString), keys["secretKey"], PasetoSignOptions{NotBefore: "1h"})
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{NotBefore: "1h"})
 
 	verified, err := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{})
 
-	assert.Nil(verified.Payload.Payload)
+	assert.Nil(verified)
 	assert.EqualError(err, "token is not active yet")
 }
 
@@ -175,11 +234,19 @@ func TestIssuedAt(t *testing.T) {
 	assert := assert.New(t)
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, _ := handler.Sign(string(payloadString), keys["secretKey"], PasetoSignOptions{IssuedAt: "2024-12-11T15:11:11Z", ExpiresIn: "10h", NotBefore: "1h"})
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{IssuedAt: "2024-12-11T15:11:11Z", ExpiresIn: "10h", NotBefore: "1h"})
 
 	decoded, _ := DecodeV4(token)
 
@@ -194,15 +261,23 @@ func TestWrongIssuer(t *testing.T) {
 	assert := assert.New(t)
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, _ := handler.Sign(string(payloadString), keys["secretKey"], PasetoSignOptions{IssuedAt: "2024-12-11T15:11:11Z", ExpiresIn: "1h", Issuer: "test-issuer"})
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{IssuedAt: "2024-12-11T15:11:11Z", ExpiresIn: "1h", Issuer: "test-issuer"})
 
 	verified, err := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{Issuer: "not-same-issuer"})
 
-	assert.Nil(verified.Payload.Payload)
+	assert.Nil(verified)
 	assert.EqualError(err, "issuer mismatch")
 }
 
@@ -212,11 +287,19 @@ func TestWrongAudience(t *testing.T) {
 	assert := assert.New(t)
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, _ := handler.Sign(string(payloadString), keys["secretKey"], PasetoSignOptions{
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{
 		IssuedAt:  "2024-12-11T15:11:11Z",
 		ExpiresIn: "1h",
 		Issuer:    "test-issuer",
@@ -225,7 +308,7 @@ func TestWrongAudience(t *testing.T) {
 
 	verified, err := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{Issuer: "test-issuer", Audience: "wrong-audience"})
 
-	assert.Nil(verified.Payload.Payload)
+	assert.Nil(verified)
 	assert.EqualError(err, "audience mismatch")
 }
 
@@ -235,21 +318,28 @@ func TestVerifyWithAssertion(t *testing.T) {
 	assert := assert.New(t)
 
 	var handler = PasetoV4Handler{}
-	var payload = map[string]any{"payload": map[string]any{"data": "test"}}
-	var assertion = []byte(keys["publicKey"])
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_InstructionPayload{
+			InstructionPayload: &protobuf.InstructionPayload{
+				Payment: &protobuf.PaymentInstruction{
+					Id: "test-id",
+				},
+			},
+		},
+	}
 
-	payloadString, _ := json.Marshal(payload)
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
 
-	token, _ := handler.Sign(string(payloadString), keys["secretKey"], PasetoSignOptions{
+	token, _ := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{
 		ExpiresIn: "1h",
 		Issuer:    "test-issuer",
 		Audience:  "test-audience",
-		Assertion: assertion,
+		Assertion: []byte(keys["publicKey"]),
 	})
 
-	verified, _ := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{Issuer: "test-issuer", Audience: "test-audience", Assertion: assertion})
+	verified, _ := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{Issuer: "test-issuer", Audience: "test-audience", Assertion: []byte(keys["publicKey"])})
 
 	assert.Equal("test-issuer", verified.Payload.Iss)
 	assert.Equal("test-audience", verified.Payload.Aud)
-	assert.Equal(payload["payload"], verified.Payload.Payload)
+	assert.Equal(payload.GetInstructionPayload().Payment.Id, verified.Payload.Data["payment"].(map[string]interface{})["id"])
 }
