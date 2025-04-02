@@ -38,7 +38,7 @@ import (
 
 func main() {
 	// Create a PASETO handler
-	pasetoHandler := paseto.PasetoV4Handler()
+	pasetoHandler := paseto.PasetoV4Handler{}
 
 	// Generate a key pair (for example purposes)
 	keys, err := paseto.GenerateKey("public", "paserk")
@@ -114,7 +114,7 @@ func main() {
 	publicKey := "issuer-public-key" // Could be paserk format
 
 	// Create a PASETO handler
-	pasetoHandler := paseto.PasetoV4Handler()
+	pasetoHandler := paseto.PasetoV4Handler{}
 
 	// Create a payment instructions builder
 	builder := protocol.PaymentInstructionsBuilder{
@@ -153,7 +153,7 @@ import (
 
 func main() {
 	// Create a PASETO handler
-	pasetoHandler := paseto.PasetoV4Handler()
+	pasetoHandler := paseto.PasetoV4Handler{}
 
 	// Generate a key pair (for example purposes)
 	keys, err := paseto.GenerateKey("public", "paserk")
