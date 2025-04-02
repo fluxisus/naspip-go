@@ -12,29 +12,44 @@ import (
 	pasetoV4 "zntr.io/paseto/v4"
 )
 
+// PasetoTokenData represents the payload structure of a PASETO token.
+// It contains standard PASETO claims as well as custom data for NASPIP.
 type PasetoTokenData struct {
-	Iss  string                 `json:"iss"`
-	Sub  string                 `json:"sub"`
-	Aud  string                 `json:"aud"`
-	Exp  string                 `json:"exp"`
-	Nbf  string                 `json:"nbf"`
-	Iat  string                 `json:"iat"`
-	Jti  string                 `json:"jti"`
-	Kid  string                 `json:"kid"`
-	Kep  string                 `json:"kep"`
-	Kis  string                 `json:"kis"`
-	Data map[string]interface{} `json:"data"`
+	Iss  string                 `json:"iss"`  // Issuer of the token
+	Sub  string                 `json:"sub"`  // Subject of the token
+	Aud  string                 `json:"aud"`  // Audience of the token
+	Exp  string                 `json:"exp"`  // Expiration time (RFC3339Mili format)
+	Nbf  string                 `json:"nbf"`  // Not before time (RFC3339Mili format)
+	Iat  string                 `json:"iat"`  // Issued at time (RFC3339Mili format)
+	Jti  string                 `json:"jti"`  // JWT ID (unique identifier)
+	Kid  string                 `json:"kid"`  // Key ID
+	Kep  string                 `json:"kep"`  // Key expiration time (RFC3339 format)
+	Kis  string                 `json:"kis"`  // Key issuer
+	Data map[string]interface{} `json:"data"` // Custom payload data
 }
 
+// PasetoCompleteResult represents a fully parsed PASETO token.
+// It includes version information, purpose, footer, and the payload data.
 type PasetoCompleteResult struct {
-	Version string          `json:"version"`
-	Purpose string          `json:"purpose"`
-	Footer  []byte          `json:"footer"`
-	Payload PasetoTokenData `json:"payload"`
+	Version string          `json:"version"` // PASETO version (v4)
+	Purpose string          `json:"purpose"` // PASETO purpose (public)
+	Footer  []byte          `json:"footer"`  // Token footer
+	Payload PasetoTokenData `json:"payload"` // Parsed token payload
 }
 
+// PasetoV4Handler implements the PasetoV4 interface for handling PASETO v4 tokens.
+// It provides methods for signing and verifying tokens using Ed25519 keys.
 type PasetoV4Handler struct{}
 
+// Sign creates a new PASETO v4 token with the provided payload and signing options.
+//
+// Parameters:
+//   - payload: Protocol buffer encoded data to include in the token
+//   - privateKey: Ed25519 private key in raw or PASERK format
+//   - options: Configuration options for the token
+//
+// Returns:
+//   - A PASETO v4 token string or an error if token creation fails
 func (p PasetoV4Handler) Sign(payload []byte, privateKey string, options PasetoSignOptions) (string, error) {
 	var data protobuf.PasetoTokenData
 
@@ -92,6 +107,16 @@ func (p PasetoV4Handler) Sign(payload []byte, privateKey string, options PasetoS
 	return pasetoV4.Sign(dataBytes, key, options.Footer, options.Assertion)
 }
 
+// Verify validates a PASETO v4 token using the provided public key and options.
+//
+// Parameters:
+//   - token: PASETO v4 token to verify
+//   - publicKey: Ed25519 public key in raw or PASERK format
+//   - options: Verification options and expected claims
+//
+// Returns:
+//   - A parsed PasetoCompleteResult containing the token data if verification succeeds
+//   - An error if verification fails for any reason
 func (p PasetoV4Handler) Verify(token string, publicKey string, options PasetoVerifyOptions) (*PasetoCompleteResult, error) {
 
 	var key = GetPublicKey(publicKey)
@@ -129,6 +154,10 @@ func (p PasetoV4Handler) Verify(token string, publicKey string, options PasetoVe
 	return &data, nil
 }
 
+// assertPayload validates the claims within a PASETO token payload according to the verification options.
+// It checks issuer, subject, audience, issued-at time, not-before time, expiration, and token age.
+//
+// Returns an error if any validation fails according to the provided options.
 func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
 
 	var now = time.Now().UTC()
