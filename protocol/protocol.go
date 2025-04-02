@@ -1,3 +1,6 @@
+// Package protocol implements the Network-Agnostic Secure Payment Instructions Protocol (NASPIP).
+// It provides functionality for creating, validating, and processing payment instructions
+// using PASETO tokens with asymmetric cryptography for security.
 package protocol
 
 import (
@@ -12,83 +15,111 @@ import (
 	validator "github.com/tiendc/go-validator"
 )
 
+// QrPaymentTokenData represents the structure of a decoded NASPIP token.
+// This is the result of splitting a NASPIP token string into its components.
 type QrPaymentTokenData struct {
-	Prefix    string `json:"prefix"`
-	KeyIssuer string `json:"kis"`
-	KeyId     string `json:"kid"`
-	Token     string `json:"token"`
+	Prefix    string `json:"prefix"` // Protocol prefix ("naspip")
+	KeyIssuer string `json:"kis"`    // Entity that issued the key
+	KeyId     string `json:"kid"`    // Unique identifier for the key
+	Token     string `json:"token"`  // PASETO token containing encrypted data
 }
 
+// TokenPublicKeyOptions contains options related to the key used to sign NASPIP tokens.
 type TokenPublicKeyOptions struct {
-	KeyId         string
-	KeyExpiration string
-	KeyIssuer     string
+	KeyId         string // Unique identifier for the key
+	KeyExpiration string // When the key expires (RFC3339 format)
+	KeyIssuer     string // Entity that issued the key
 }
 
+// UrlPayload represents a payment URL instruction payload.
+// This is used for directing users to a payment service endpoint.
 type UrlPayload struct {
-	Url            string           `json:"url"`
-	PaymentOptions []string         `json:"payment_options,omitempty"`
-	Order          InstructionOrder `json:"order,omitempty"`
+	Url            string           `json:"url"`                       // Payment service URL
+	PaymentOptions []string         `json:"payment_options,omitempty"` // Available payment asset IDs
+	Order          InstructionOrder `json:"order,omitempty"`           // Optional order information
 }
 
+// InstructionPayload represents a complete payment instruction.
+// This contains both the payment details and optional order information.
 type InstructionPayload struct {
-	Payment PaymentInstruction `json:"payment"`
-	Order   InstructionOrder   `json:"order,omitempty"`
+	Payment PaymentInstruction `json:"payment"`         // Payment details
+	Order   InstructionOrder   `json:"order,omitempty"` // Optional order information
 }
 
+// PaymentInstruction contains the essential details needed to make a payment.
+// This includes recipient address, amount, expiration, and other payment parameters.
 type PaymentInstruction struct {
-	Id            string `json:"id"`
-	Address       string `json:"address"`
-	AddressTag    string `json:"address_tag,omitempty"`
-	UniqueAssetId string `json:"unique_asset_id"`
-	IsOpen        bool   `json:"is_open"`
-	Amount        string `json:"amount,omitempty"`
-	MinAmount     string `json:"min_amount,omitempty"`
-	MaxAmount     string `json:"max_amount,omitempty"`
-	ExpiresAt     int64  `json:"expires_at"`
+	Id            string `json:"id"`                    // Unique payment identifier
+	Address       string `json:"address"`               // Recipient's address
+	AddressTag    string `json:"address_tag,omitempty"` // Optional tag/memo (for blockchains that require it)
+	UniqueAssetId string `json:"unique_asset_id"`       // Asset identifier (cryptocurrency/token)
+	IsOpen        bool   `json:"is_open"`               // Whether the amount is open (variable)
+	Amount        string `json:"amount,omitempty"`      // Fixed amount (when IsOpen is false)
+	MinAmount     string `json:"min_amount,omitempty"`  // Minimum amount (when IsOpen is true)
+	MaxAmount     string `json:"max_amount,omitempty"`  // Maximum amount (when IsOpen is true)
+	ExpiresAt     int64  `json:"expires_at"`            // Unix timestamp when payment expires
 }
 
+// InstructionOrder contains additional information about the order.
+// This provides context for the payment such as merchant details and items purchased.
 type InstructionOrder struct {
-	Total       string              `json:"total"`
-	CoinCode    string              `json:"coin_code"`
-	Description string              `json:"description,omitempty"`
-	Merchant    InstructionMerchant `json:"merchant,omitempty"`
-	Items       []InstructionItem   `json:"items,omitempty"`
+	Total       string              `json:"total"`                 // Total order amount
+	CoinCode    string              `json:"coin_code"`             // Currency code (e.g., USD, EUR)
+	Description string              `json:"description,omitempty"` // Order description
+	Merchant    InstructionMerchant `json:"merchant,omitempty"`    // Merchant information
+	Items       []InstructionItem   `json:"items,omitempty"`       // Individual items in the order
 }
 
+// InstructionMerchant contains information about the merchant.
+// This helps identify the recipient of the payment.
 type InstructionMerchant struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	TaxId       string `json:"tax_id,omitempty"`
-	Image       string `json:"image,omitempty"` // url, data-uri scheme i.e. data:image/[type];base64,[base_64_encoded_file_contents]
-	Mcc         string `json:"mcc,omitempty"`   // merchant category code. ISO 18245
+	Name        string `json:"name"`                  // Merchant name
+	Description string `json:"description,omitempty"` // Merchant description
+	TaxId       string `json:"tax_id,omitempty"`      // Tax identification number
+	Image       string `json:"image,omitempty"`       // Merchant logo/image URL or data URI
+	Mcc         string `json:"mcc,omitempty"`         // Merchant category code (ISO 18245)
 }
 
+// InstructionItem represents an individual item in an order.
+// This provides details about a specific product or service being purchased.
 type InstructionItem struct {
-	Description string `json:"description"`
-	Amount      string `json:"amount"`
-	CoinCode    string `json:"coin_code"`
-	UnitPrice   string `json:"unit_price,omitempty"`
-	Quantity    int    `json:"quantity,omitempty"`
+	Description string `json:"description"`          // Item description
+	Amount      string `json:"amount"`               // Total amount for this item
+	CoinCode    string `json:"coin_code"`            // Currency code for this item
+	UnitPrice   string `json:"unit_price,omitempty"` // Price per unit
+	Quantity    int    `json:"quantity,omitempty"`   // Number of units
 }
 
+// QrCriptoReadOptions contains options for reading and verifying NASPIP tokens.
 type QrCriptoReadOptions struct {
-	VerifyOptions paseto.PasetoVerifyOptions
-	KeyId         string
-	KeyIssuer     string
-	IgnoreKeyExp  bool
+	VerifyOptions paseto.PasetoVerifyOptions // PASETO verification options
+	KeyId         string                     // Expected key ID
+	KeyIssuer     string                     // Expected key issuer
+	IgnoreKeyExp  bool                       // Whether to ignore key expiration
 }
 
+// QrCriptoCreateOptions contains options for creating NASPIP tokens.
 type QrCriptoCreateOptions struct {
-	SignOptions   paseto.PasetoSignOptions
-	KeyIssuer     string
-	KeyExpiration string
+	SignOptions   paseto.PasetoSignOptions // PASETO signing options
+	KeyIssuer     string                   // Key issuer identifier
+	KeyExpiration string                   // Key expiration date (RFC3339 format)
 }
 
+// PaymentInstructionsBuilder creates and validates NASPIP payment instructions.
+// It serves as the main entry point for interacting with the NASPIP protocol.
 type PaymentInstructionsBuilder struct {
-	PasetoHandler paseto.PasetoV4
+	PasetoHandler paseto.PasetoV4 // Handler for PASETO operations
 }
 
+// Decode splits a NASPIP token string into its components.
+// It validates that the token has the correct format and prefix.
+//
+// Parameters:
+//   - qrPayment: A NASPIP token string in the format "naspip;[key-issuer];[key-id];[paseto-token]"
+//
+// Returns:
+//   - A QrPaymentTokenData struct containing the split components
+//   - An error if the token format is invalid
 func (p PaymentInstructionsBuilder) Decode(qrPayment string) (QrPaymentTokenData, error) {
 	values := strings.Split(qrPayment, ";")
 
@@ -103,6 +134,17 @@ func (p PaymentInstructionsBuilder) Decode(qrPayment string) (QrPaymentTokenData
 	return data, nil
 }
 
+// Read decodes and verifies a NASPIP token.
+// It validates the token signature and checks expiration dates and key information.
+//
+// Parameters:
+//   - qrPayment: A NASPIP token string to verify
+//   - publicKey: The public key (in raw or PASERK format) to verify the token signature
+//   - options: Options controlling verification behavior
+//
+// Returns:
+//   - The parsed token content if verification succeeds
+//   - An error if decoding or verification fails
 func (p PaymentInstructionsBuilder) Read(qrPayment string, publicKey string, options QrCriptoReadOptions) (*paseto.PasetoCompleteResult, error) {
 	decodedQr, errQr := p.Decode(qrPayment)
 
@@ -147,6 +189,17 @@ func (p PaymentInstructionsBuilder) Read(qrPayment string, publicKey string, opt
 	return data, nil
 }
 
+// CreateUrlPayload creates a NASPIP token containing a URL payload.
+// This is used when redirecting to a payment service that will generate the actual payment instructions.
+//
+// Parameters:
+//   - data: The URL payload to encode in the token
+//   - secretKey: The private key (in raw or PASERK format) to sign the token
+//   - options: Options for token creation
+//
+// Returns:
+//   - A NASPIP token string if creation succeeds
+//   - An error if validation or creation fails
 func (p PaymentInstructionsBuilder) CreateUrlPayload(data UrlPayload, secretKey string, options QrCriptoCreateOptions) (string, error) {
 
 	isValid, err := validateUrlPayload(data)
@@ -169,6 +222,17 @@ func (p PaymentInstructionsBuilder) CreateUrlPayload(data UrlPayload, secretKey 
 	return p.create(payload, secretKey, options)
 }
 
+// CreatePaymentInstruction creates a NASPIP token containing complete payment instructions.
+// This provides all the information needed to make a payment directly.
+//
+// Parameters:
+//   - data: The payment instruction payload to encode in the token
+//   - secretKey: The private key (in raw or PASERK format) to sign the token
+//   - options: Options for token creation
+//
+// Returns:
+//   - A NASPIP token string if creation succeeds
+//   - An error if validation or creation fails
 func (p PaymentInstructionsBuilder) CreatePaymentInstruction(data InstructionPayload, secretKey string, options QrCriptoCreateOptions) (string, error) {
 
 	isValid, err := validatePaymentInstructionPayload(data)
@@ -190,6 +254,17 @@ func (p PaymentInstructionsBuilder) CreatePaymentInstruction(data InstructionPay
 	return p.create(payload, secretKey, options)
 }
 
+// create is an internal method that handles the common logic for creating NASPIP tokens.
+// It validates parameters, sets defaults, and performs the actual token signing.
+//
+// Parameters:
+//   - data: Protocol buffer encoded payload data
+//   - secretKey: Private key for signing
+//   - options: Token creation options
+//
+// Returns:
+//   - A NASPIP token string if successful
+//   - An error if validation or signing fails
 func (p PaymentInstructionsBuilder) create(data *protobuf.PasetoTokenData, secretKey string, options QrCriptoCreateOptions) (string, error) {
 
 	keyOptions := TokenPublicKeyOptions{KeyId: options.SignOptions.KeyId, KeyIssuer: options.KeyIssuer, KeyExpiration: options.KeyExpiration}
@@ -230,6 +305,16 @@ func (p PaymentInstructionsBuilder) create(data *protobuf.PasetoTokenData, secre
 	return qrPayment, nil
 }
 
+// validateParameters verifies that the required key parameters are present and valid.
+// It checks that the secret key is provided and that the key information is complete and valid.
+//
+// Parameters:
+//   - secretKey: The private key to validate
+//   - optionsKey: Key options containing ID, issuer, and expiration
+//
+// Returns:
+//   - true if all parameters are valid
+//   - false and an error describing the problem if validation fails
 func validateParameters(secretKey string, optionsKey TokenPublicKeyOptions) (bool, error) {
 
 	if secretKey == "" {
@@ -257,6 +342,15 @@ func validateParameters(secretKey string, optionsKey TokenPublicKeyOptions) (boo
 	return true, nil
 }
 
+// validateUrlPayload performs validation on a URL payload.
+// It checks that the URL is valid and that all optional fields meet their requirements.
+//
+// Parameters:
+//   - payload: The URL payload to validate
+//
+// Returns:
+//   - true if the payload passes all validation rules
+//   - false and an error describing the problem if validation fails
 func validateUrlPayload(payload UrlPayload) (bool, error) {
 	errs := validator.Validate(
 		validator.StrIsRequestURL(&payload.Url).OnError(
@@ -331,6 +425,15 @@ func validateUrlPayload(payload UrlPayload) (bool, error) {
 	return true, nil
 }
 
+// validatePaymentInstructionPayload performs validation on a payment instruction payload.
+// It checks that required fields are present and that all fields meet their format requirements.
+//
+// Parameters:
+//   - payload: The payment instruction payload to validate
+//
+// Returns:
+//   - true if the payload passes all validation rules
+//   - false and an error describing the problem if validation fails
 func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error) {
 	errs := validator.Validate(
 		validator.StrLen(&payload.Payment.Id, 1, 1000).OnError(

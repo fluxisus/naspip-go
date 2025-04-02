@@ -10,6 +10,18 @@ import (
 	"github.com/fluxisus/naspip-go/v3/utils"
 )
 
+// GenerateKey creates a new Ed25519 key pair for use with PASETO v4 tokens.
+//
+// Parameters:
+//   - purpose: The PASETO purpose ("public" is the only supported value for v4)
+//   - format: The output format for the keys ("keyobject" or "paserk")
+//
+// Returns:
+//   - A map containing "secretKey" and "publicKey" entries
+//   - An error if the purpose or format is invalid
+//
+// The "keyobject" format returns raw base64url-encoded keys.
+// The "paserk" format returns PASERK-formatted keys (k4.secret/k4.public prefixed).
 func GenerateKey(purpose string, format string) (map[string]string, error) {
 	if purpose != "public" {
 		return nil, errors.New("unsupported v4 purpose")
@@ -35,6 +47,11 @@ func GenerateKey(purpose string, format string) (map[string]string, error) {
 	return result, nil
 }
 
+// GetPrivateKey converts a string representation of an Ed25519 private key
+// to the crypto/ed25519.PrivateKey type.
+//
+// It supports both raw keys and PASERK-formatted keys (k4.secret.* format).
+// For PASERK keys, it extracts and decodes the base64url-encoded portion.
 func GetPrivateKey(key string) ed25519.PrivateKey {
 	if bytes.HasPrefix([]byte(key), []byte("k4.secret.")) {
 		keyString, _ := utils.DecodeRawURLBase64(key[10:])
@@ -45,6 +62,11 @@ func GetPrivateKey(key string) ed25519.PrivateKey {
 	return ed25519.PrivateKey(key)
 }
 
+// GetPublicKey converts a string representation of an Ed25519 public key
+// to the crypto/ed25519.PublicKey type.
+//
+// It supports both raw keys and PASERK-formatted keys (k4.public.* format).
+// For PASERK keys, it extracts and decodes the base64url-encoded portion.
 func GetPublicKey(key string) ed25519.PublicKey {
 	if bytes.HasPrefix([]byte(key), []byte("k4.public.")) {
 		keyString, _ := utils.DecodeRawURLBase64(key[10:])
@@ -55,6 +77,18 @@ func GetPublicKey(key string) ed25519.PublicKey {
 	return ed25519.PublicKey(key)
 }
 
+// DecodeV4 parses a PASETO v4 token string without verifying its signature.
+// This is useful for extracting token information before verification.
+//
+// Parameters:
+//   - token: A PASETO v4 token string
+//
+// Returns:
+//   - A PasetoCompleteResult containing the parsed token parts
+//   - An error if the token is not a valid PASETO v4 format
+//
+// Note: This function does not verify the token's signature,
+// so the extracted payload should not be trusted without verification.
 func DecodeV4(token string) (PasetoCompleteResult, error) {
 
 	data := strings.Split(token, ".")
