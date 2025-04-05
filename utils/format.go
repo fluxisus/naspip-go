@@ -2,7 +2,10 @@
 // including encoding/decoding utilities and value validation helpers.
 package utils
 
-import "encoding/base64"
+import (
+	"encoding/base64"
+	"strconv"
+)
 
 // RFC3339Mili is a time format constant that extends RFC3339 with millisecond precision.
 // It can be used with time.Format and time.Parse functions for consistent time representation.
@@ -30,4 +33,14 @@ func EncodeURLBase64(value []byte) string {
 // It returns the decoded bytes or an error if the input is not valid base64.
 func DecodeURLBase64(value string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(value)
+}
+
+// FormatStringTimestampToUnixMilli formats a time string to a Unix timestamp in milliseconds.
+// It parses the time string using RFC3339Mili format and returns the Unix timestamp in milliseconds.
+func FormatStringTimestampToUnixMilli(expiresAt string) int64 {
+	convertedValue, err := strconv.ParseInt(expiresAt, 10, 64)
+	if err != nil {
+		return -1
+	}
+	return convertedValue
 }
