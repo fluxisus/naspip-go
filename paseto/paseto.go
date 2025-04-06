@@ -143,7 +143,10 @@ func (p PasetoV4Handler) Verify(token string, publicKey string, options PasetoVe
 		return nil, err
 	}
 
-	formatPayloadExpiresAt(&payload)
+	// For InstructionPayload, convert payment.expires_at to int64
+	if _, ok := payload.Data["payment"]; ok {
+		formatPayloadExpiresAt(&payload)
+	}
 
 	verifyErr := assertPayload(payload, options)
 
@@ -242,12 +245,10 @@ func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
 		}
 	}
 
-	// Check expires_at is int64
-	if !options.IgnoreExp {
-		expiresAt, ok := payload.Data["payment"].(map[string]interface{})["expires_at"].(int64)
-		if !ok || expiresAt == -1 {
-			return errors.New("payload.expires_at must be positive int64")
-		}
+	// Convert Payload data payment.expires_at to int64
+	expiresAt, ok := payload.Data["payment"].(map[string]interface{})["expires_at"].(int64)
+	if !ok || expiresAt == -1 {
+		return errors.New("error converting payload.expires_at to int64")
 	}
 
 	return nil
