@@ -29,7 +29,6 @@ func TestCreateOpenPayment(t *testing.T) {
 			UniqueAssetId: "ntrc20_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
 			Address:       "crypto-address",
 			IsOpen:        true,
-			MinAmount:     "1",
 			MaxAmount:     "100",
 			ExpiresAt:     time.Now().Add(time.Minute * 5).UnixMilli(),
 		},

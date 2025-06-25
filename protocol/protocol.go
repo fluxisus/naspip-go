@@ -450,12 +450,12 @@ func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error)
 		),
 
 		validator.When(payload.Payment.IsOpen).Then(
-			validator.Must(payload.Payment.MinAmount != "" && utils.BiggerThanOrEqualZero(payload.Payment.MinAmount)).OnError(
+			validator.Must(payload.Payment.MinAmount == "" || utils.BiggerThanOrEqualZero(payload.Payment.MinAmount)).OnError(
 				validator.SetField("payment_min_amount", nil),
 				validator.SetCustomKey("PAYMENT_MIN_AMOUNT_INVALID"),
 			),
 
-			validator.Must(payload.Payment.MaxAmount != "" && utils.BiggerThanZero(payload.Payment.MaxAmount)).OnError(
+			validator.Must(payload.Payment.MaxAmount == "" || utils.BiggerThanZero(payload.Payment.MaxAmount)).OnError(
 				validator.SetField("payment_min_amount", nil),
 				validator.SetCustomKey("PAYMENT_MAX_AMOUNT_INVALID"),
 			),
