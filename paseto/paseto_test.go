@@ -343,3 +343,34 @@ func TestVerifyWithAssertion(t *testing.T) {
 	assert.Equal("test-audience", verified.Payload.Aud)
 	assert.Equal(payload.GetInstructionPayload().Payment.Id, verified.Payload.Data["payment"].(map[string]interface{})["id"])
 }
+
+// Should verify a token with URL payload
+func TestVerifyUrlPayload(t *testing.T) {
+	assert := assert.New(t)
+
+	var handler = PasetoV4Handler{}
+	var payload = protobuf.PasetoTokenData{
+		Data: &protobuf.PasetoTokenData_UrlPayload{
+			UrlPayload: &protobuf.UrlPayload{
+				Url: "https://example.fluxis.us/public/checkout/1234567890",
+			},
+		},
+	}
+
+	payloadBytes, _ := protobuf.EncodeProto(&payload)
+
+	token, errSign := handler.Sign(payloadBytes, keys["secretKey"], PasetoSignOptions{ExpiresIn: "1h"})
+
+	if errSign != nil {
+		t.Errorf("TestVerifyUrlPayload Sign FAIL --> %v", errSign)
+	}
+
+	verified, err := handler.Verify(token, keys["publicKey"], PasetoVerifyOptions{})
+
+	if err != nil {
+		t.Errorf("TestVerifyUrlPayload Verify FAIL --> %v", err)
+	}
+
+	assert.NotNil(verified)
+	assert.Equal("https://example.com/payment", verified.Payload.Data["url"])
+}
