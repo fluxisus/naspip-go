@@ -372,5 +372,5 @@ func TestVerifyUrlPayload(t *testing.T) {
 	}
 
 	assert.NotNil(verified)
-	assert.Equal("https://example.com/payment", verified.Payload.Data["url"])
+	assert.Equal("https://example.fluxis.us/public/checkout/1234567890", verified.Payload.Data["url"])
 }
