@@ -144,13 +144,9 @@ func (p PasetoV4Handler) Verify(token string, publicKey string, options PasetoVe
 	}
 
 	// For InstructionPayload, convert payment.expires_at to int64
-	if paymentData, ok := payload.Data["payment"]; ok {
-		if paymentMap, ok := paymentData.(map[string]interface{}); ok {
-			if expiresAtStr, ok := paymentMap["expires_at"].(string); ok {
-				paymentMap["expires_at"] = utils.FormatStringTimestampToUnixMilli(expiresAtStr)
-			}
-		}
-	}
+	// if _, ok := payload.Data["payment"]; ok {
+	// 	payload.Data["payment"].(map[string]interface{})["expires_at"] = utils.FormatStringTimestampToUnixMilli(payload.Data["payment"].(map[string]interface{})["expires_at"].(string))
+	// }
 
 	verifyErr := assertPayload(payload, options)
 
@@ -249,31 +245,11 @@ func assertPayload(payload PasetoTokenData, options PasetoVerifyOptions) error {
 		}
 	}
 
-	// Check if this is a payment instruction or URL payload
-	if _, exists := payload.Data["payment"]; exists {
-		// This is a payment instruction payload - validation passed
-		return nil
-	} else if _, exists := payload.Data["url_payload"]; exists {
-		// This is a URL payload - no expires_at field needed
-		return nil
-	} else if _, exists := payload.Data["data"]; exists {
-		// Check if data contains url_payload or payment
-		if dataMap, ok := payload.Data["data"].(map[string]interface{}); ok {
-			if _, hasUrl := dataMap["url"]; hasUrl {
-				// This is a URL payload
-				return nil
-			} else if _, hasPayment := dataMap["payment"]; hasPayment {
-				// This is a payment instruction
-				return nil
-			}
-		}
-		// Unknown payload type
-		return errors.New("unknown payload type")
-	} else if _, exists := payload.Data["url"]; exists {
-		// This is a URL payload (flattened structure)
-		return nil
-	} else {
-		// Unknown payload type
-		return errors.New("unknown payload type")
-	}
+	// Convert Payload data payment.expires_at to int64
+	// expiresAt, ok := payload.Data["payment"].(map[string]interface{})["expires_at"].(int64)
+	// if !ok || expiresAt == -1 {
+	// 	return errors.New("error converting payload.expires_at to int64")
+	// }
+
+	return nil
 }
