@@ -34,16 +34,16 @@ type TokenPublicKeyOptions struct {
 // UrlPayload represents a payment URL instruction payload.
 // This is used for directing users to a payment service endpoint.
 type UrlPayload struct {
-	Url            string           `json:"url"`                       // Payment service URL
-	PaymentOptions []string         `json:"payment_options,omitempty"` // Available payment asset IDs
-	Order          InstructionOrder `json:"order,omitempty"`           // Optional order information
+	Url            string            `json:"url"`                       // Payment service URL
+	PaymentOptions []string          `json:"payment_options,omitempty"` // Available payment asset IDs
+	Order          *InstructionOrder `json:"order,omitempty"`           // Optional order information
 }
 
 // InstructionPayload represents a complete payment instruction.
 // This contains both the payment details and optional order information.
 type InstructionPayload struct {
 	Payment PaymentInstruction `json:"payment"`         // Payment details
-	Order   InstructionOrder   `json:"order,omitempty"` // Optional order information
+	Order   *InstructionOrder  `json:"order,omitempty"` // Optional order information
 }
 
 // PaymentInstruction contains the essential details needed to make a payment.
@@ -63,11 +63,11 @@ type PaymentInstruction struct {
 // InstructionOrder contains additional information about the order.
 // This provides context for the payment such as merchant details and items purchased.
 type InstructionOrder struct {
-	Total       string              `json:"total"`                 // Total order amount
-	CoinCode    string              `json:"coin_code"`             // Currency code (e.g., USD, EUR)
-	Description string              `json:"description,omitempty"` // Order description
-	Merchant    InstructionMerchant `json:"merchant,omitempty"`    // Merchant information
-	Items       []InstructionItem   `json:"items,omitempty"`       // Individual items in the order
+	Total       string               `json:"total"`                 // Total order amount
+	CoinCode    string               `json:"coin_code"`             // Currency code (e.g., USD, EUR)
+	Description string               `json:"description,omitempty"` // Order description
+	Merchant    *InstructionMerchant `json:"merchant,omitempty"`    // Merchant information
+	Items       []InstructionItem    `json:"items,omitempty"`       // Individual items in the order
 }
 
 // InstructionMerchant contains information about the merchant.
@@ -352,7 +352,8 @@ func validateParameters(secretKey string, optionsKey TokenPublicKeyOptions) (boo
 //   - true if the payload passes all validation rules
 //   - false and an error describing the problem if validation fails
 func validateUrlPayload(payload UrlPayload) (bool, error) {
-	errs := validator.Validate(
+
+	validations := []validator.Validator{
 		validator.StrIsRequestURL(&payload.Url).OnError(
 			validator.SetField("url", nil),
 			validator.SetCustomKey("invalid url"),
@@ -364,59 +365,72 @@ func validateUrlPayload(payload UrlPayload) (bool, error) {
 				validator.SetCustomKey(fmt.Sprintf("PAYMENT_OPTIONS_INDEX_[%d]_INVALID", index)),
 			)
 		}),
+	}
 
-		validator.When(payload.Order.CoinCode != "").Then(validator.StrLen(&payload.Order.CoinCode, 2, 50).OnError(
-			validator.SetField("order_coin_code", nil),
-		)),
-		validator.When(payload.Order.Description != "").Then(validator.StrLen(&payload.Order.Description, 1, 200).OnError(
-			validator.SetField("order_description", nil),
-		)),
-		validator.When(payload.Order.Total != "").Then(
-			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.Total)).OnError(
-				validator.SetField("order_total_amount", nil),
-				validator.SetCustomKey("ORDER_TOTAL_AMOUNT_INVALID"),
+	if payload.Order != nil {
+		if payload.Order.Merchant != nil {
+			merchantValidations := []validator.Validator{
+				validator.When(payload.Order.Merchant.Name != "").Then(validator.StrLen(&payload.Order.Merchant.Name, 3, 100).OnError(
+					validator.SetField("order_merchant_name", nil),
+				)),
+				validator.When(payload.Order.Merchant.Description != "").Then(validator.StrLen(&payload.Order.Merchant.Description, 3, 200).OnError(
+					validator.SetField("order_merchant_description", nil),
+				)),
+				validator.When(payload.Order.Merchant.TaxId != "").Then(validator.StrLen(&payload.Order.Merchant.TaxId, 6, 50).OnError(
+					validator.SetField("order_merchant_tax_id", nil),
+				)),
+				validator.When(payload.Order.Merchant.Image != "").Then(validator.StrIsRequestURI(&payload.Order.Merchant.Image).OnError(
+					validator.SetField("order_merchant_image_url", nil),
+				)),
+			}
+			validations = append(validations, merchantValidations...)
+		}
+
+		orderValidations := []validator.Validator{
+			validator.When(payload.Order.CoinCode != "").Then(validator.StrLen(&payload.Order.CoinCode, 2, 50).OnError(
+				validator.SetField("order_coin_code", nil),
 			)),
-		validator.When(payload.Order.Merchant.Name != "").Then(validator.StrLen(&payload.Order.Merchant.Name, 3, 100).OnError(
-			validator.SetField("order_merchant_name", nil),
-		)),
-		validator.When(payload.Order.Merchant.Description != "").Then(validator.StrLen(&payload.Order.Merchant.Description, 3, 200).OnError(
-			validator.SetField("order_merchant_description", nil),
-		)),
-		validator.When(payload.Order.Merchant.TaxId != "").Then(validator.StrLen(&payload.Order.Merchant.TaxId, 6, 50).OnError(
-			validator.SetField("order_merchant_tax_id", nil),
-		)),
-		validator.When(payload.Order.Merchant.Image != "").Then(validator.StrIsRequestURI(&payload.Order.Merchant.Image).OnError(
-			validator.SetField("order_merchant_image_url", nil),
-		)),
-		validator.Slice(payload.Order.Items).ForEach(func(elem InstructionItem, index int, vld validator.ItemValidator) {
-			vld.Validate(
-				validator.When(elem.Description != "").Then(
-					validator.StrLen(&elem.Description, 3, 100).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
+			validator.When(payload.Order.Description != "").Then(validator.StrLen(&payload.Order.Description, 1, 200).OnError(
+				validator.SetField("order_description", nil),
+			)),
+			validator.When(payload.Order.Total != "").Then(
+				validator.Must(utils.BiggerThanOrEqualZero(payload.Order.Total)).OnError(
+					validator.SetField("order_total_amount", nil),
+					validator.SetCustomKey("ORDER_TOTAL_AMOUNT_INVALID"),
+				)),
+			validator.Slice(payload.Order.Items).ForEach(func(elem InstructionItem, index int, vld validator.ItemValidator) {
+				vld.Validate(
+					validator.When(elem.Description != "").Then(
+						validator.StrLen(&elem.Description, 3, 100).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
+						),
+						validator.NumGT(&elem.Quantity, 0).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_quantity", index), nil),
+						),
+						validator.Must(utils.BiggerThanOrEqualZero(elem.Amount)).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_amount", index), nil),
+							validator.SetCustomKey(fmt.Sprintf("ORDER_ITEM_[%d]_TOTAL_AMOUNT_INVALID", index)),
+						),
 					),
-					validator.NumGT(&elem.Quantity, 0).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_quantity", index), nil),
-					),
-					validator.Must(utils.BiggerThanOrEqualZero(elem.Amount)).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_amount", index), nil),
-						validator.SetCustomKey(fmt.Sprintf("ORDER_ITEM_[%d]_TOTAL_AMOUNT_INVALID", index)),
-					),
-				),
-				validator.When(elem.Description != "").Then(
-					validator.StrLen(&elem.Description, 3, 100).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
-					)),
-				validator.When(elem.UnitPrice != "").Then(
-					validator.StrLen(&elem.UnitPrice, 1, 20).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_unit_price", index), nil),
-					)),
-				validator.When(elem.CoinCode != "").Then(
-					validator.StrLen(&elem.CoinCode, 2, 50).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_coin_code", index), nil),
-					)),
-			)
-		}),
-	)
+					validator.When(elem.Description != "").Then(
+						validator.StrLen(&elem.Description, 3, 100).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
+						)),
+					validator.When(elem.UnitPrice != "").Then(
+						validator.StrLen(&elem.UnitPrice, 1, 20).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_unit_price", index), nil),
+						)),
+					validator.When(elem.CoinCode != "").Then(
+						validator.StrLen(&elem.CoinCode, 2, 50).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_coin_code", index), nil),
+						)),
+				)
+			})}
+
+		validations = append(validations, orderValidations...)
+	}
+
+	errs := validator.Validate(validations...)
 
 	if len(errs) > 0 {
 		return false, errs[0]
@@ -435,7 +449,7 @@ func validateUrlPayload(payload UrlPayload) (bool, error) {
 //   - true if the payload passes all validation rules
 //   - false and an error describing the problem if validation fails
 func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error) {
-	errs := validator.Validate(
+	validations := []validator.Validator{
 		validator.StrLen(&payload.Payment.Id, 1, 1000).OnError(
 			validator.SetField("payment_id", nil),
 		),
@@ -465,59 +479,72 @@ func validatePaymentInstructionPayload(payload InstructionPayload) (bool, error)
 				validator.SetCustomKey("PAYMENT_AMOUNT_INVALID"),
 			),
 		),
+	}
 
-		validator.When(payload.Order.CoinCode != "").Then(validator.StrLen(&payload.Order.CoinCode, 2, 50).OnError(
-			validator.SetField("order_coin_code", nil),
-		)),
-		validator.When(payload.Order.Description != "").Then(validator.StrLen(&payload.Order.Description, 1, 200).OnError(
-			validator.SetField("order_description", nil),
-		)),
-		validator.When(payload.Order.Total != "").Then(
-			validator.Must(utils.BiggerThanOrEqualZero(payload.Order.Total)).OnError(
-				validator.SetField("order_total", nil),
-				validator.SetCustomKey("ORDER_TOTAL_AMOUNT_INVALID"),
+	if payload.Order != nil {
+		if payload.Order.Merchant != nil {
+			merchantValidations := []validator.Validator{
+				validator.When(payload.Order.Merchant.Name != "").Then(validator.StrLen(&payload.Order.Merchant.Name, 3, 100).OnError(
+					validator.SetField("order_merchant_name", nil),
+				)),
+				validator.When(payload.Order.Merchant.Description != "").Then(validator.StrLen(&payload.Order.Merchant.Description, 3, 200).OnError(
+					validator.SetField("order_merchant_description", nil),
+				)),
+				validator.When(payload.Order.Merchant.TaxId != "").Then(validator.StrLen(&payload.Order.Merchant.TaxId, 6, 50).OnError(
+					validator.SetField("order_merchant_tax_id", nil),
+				)),
+				validator.When(payload.Order.Merchant.Image != "").Then(validator.StrIsRequestURI(&payload.Order.Merchant.Image).OnError(
+					validator.SetField("order_merchant_image_url", nil),
+				)),
+			}
+			validations = append(validations, merchantValidations...)
+		}
+
+		orderValidations := []validator.Validator{
+			validator.When(payload.Order.CoinCode != "").Then(validator.StrLen(&payload.Order.CoinCode, 2, 50).OnError(
+				validator.SetField("order_coin_code", nil),
 			)),
-		validator.When(payload.Order.Merchant.Name != "").Then(validator.StrLen(&payload.Order.Merchant.Name, 3, 100).OnError(
-			validator.SetField("order_merchant_name", nil),
-		)),
-		validator.When(payload.Order.Merchant.Description != "").Then(validator.StrLen(&payload.Order.Merchant.Description, 3, 200).OnError(
-			validator.SetField("order_merchant_description", nil),
-		)),
-		validator.When(payload.Order.Merchant.TaxId != "").Then(validator.StrLen(&payload.Order.Merchant.TaxId, 6, 50).OnError(
-			validator.SetField("order_merchant_tax_id", nil),
-		)),
-		validator.When(payload.Order.Merchant.Image != "").Then(validator.StrIsRequestURI(&payload.Order.Merchant.Image).OnError(
-			validator.SetField("order_merchant_image", nil),
-		)),
-		validator.Slice(payload.Order.Items).ForEach(func(elem InstructionItem, index int, vld validator.ItemValidator) {
-			vld.Validate(
-				validator.When(elem.Description != "").Then(
-					validator.StrLen(&elem.Description, 3, 100).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
+			validator.When(payload.Order.Description != "").Then(validator.StrLen(&payload.Order.Description, 1, 200).OnError(
+				validator.SetField("order_description", nil),
+			)),
+			validator.When(payload.Order.Total != "").Then(
+				validator.Must(utils.BiggerThanOrEqualZero(payload.Order.Total)).OnError(
+					validator.SetField("order_total_amount", nil),
+					validator.SetCustomKey("ORDER_TOTAL_AMOUNT_INVALID"),
+				)),
+			validator.Slice(payload.Order.Items).ForEach(func(elem InstructionItem, index int, vld validator.ItemValidator) {
+				vld.Validate(
+					validator.When(elem.Description != "").Then(
+						validator.StrLen(&elem.Description, 3, 100).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
+						),
+						validator.NumGT(&elem.Quantity, 0).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_quantity", index), nil),
+						),
+						validator.Must(utils.BiggerThanOrEqualZero(elem.Amount)).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_amount", index), nil),
+							validator.SetCustomKey(fmt.Sprintf("ORDER_ITEM_[%d]_TOTAL_AMOUNT_INVALID", index)),
+						),
 					),
-					validator.NumGT(&elem.Quantity, 0).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_quantity", index), nil),
-					),
-					validator.Must(utils.BiggerThanOrEqualZero(elem.Amount)).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_amount", index), nil),
-						validator.SetCustomKey(fmt.Sprintf("ORDER_ITEM_[%d]_TOTAL_AMOUNT_INVALID", index)),
-					),
-				),
-				validator.When(elem.Description != "").Then(
-					validator.StrLen(&elem.Description, 3, 100).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
-					)),
-				validator.When(elem.UnitPrice != "").Then(
-					validator.StrLen(&elem.UnitPrice, 1, 20).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_unit_price", index), nil),
-					)),
-				validator.When(elem.CoinCode != "").Then(
-					validator.StrLen(&elem.CoinCode, 2, 50).OnError(
-						validator.SetField(fmt.Sprintf("order_item_[%d]_coin_code", index), nil),
-					)),
-			)
-		}),
-	)
+					validator.When(elem.Description != "").Then(
+						validator.StrLen(&elem.Description, 3, 100).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_description", index), nil),
+						)),
+					validator.When(elem.UnitPrice != "").Then(
+						validator.StrLen(&elem.UnitPrice, 1, 20).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_unit_price", index), nil),
+						)),
+					validator.When(elem.CoinCode != "").Then(
+						validator.StrLen(&elem.CoinCode, 2, 50).OnError(
+							validator.SetField(fmt.Sprintf("order_item_[%d]_coin_code", index), nil),
+						)),
+				)
+			})}
+
+		validations = append(validations, orderValidations...)
+	}
+
+	errs := validator.Validate(validations...)
 
 	if len(errs) > 0 {
 		return false, errs[0]
